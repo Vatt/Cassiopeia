@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <EnablePreviewFeatures>True</EnablePreviewFeatures>
+	<LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cassiopeia.Connections\Cassiopeia.Connections.csproj" />
+    <ProjectReference Include="..\Cassiopeia.Protocol\Cassiopeia.Protocol.csproj" />
+  </ItemGroup>
+
+</Project>
