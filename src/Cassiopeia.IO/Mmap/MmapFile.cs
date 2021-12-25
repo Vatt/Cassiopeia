@@ -1,37 +1,36 @@
-﻿using DotNext.IO.MemoryMappedFiles;
-using System;
-using System.Buffers;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.IO.MemoryMappedFiles;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO.MemoryMappedFiles;
 
 namespace Cassiopeia.IO.Mmap;
 
 public class MmapFile : IDisposable
 {
-    private readonly MemoryMappedFile _mmapFile;
+    private readonly MemoryMappedFile mmapFile;
+    private unsafe MappedMemoryOwner memoryOwner;
     public int Size { get; }
-    public Span<byte> Span => MemoryOwner.Bytes;
-    public Memory<byte> Memory => MemoryOwner.Memory;
-    public unsafe IMappedMemoryOwner MemoryOwner;
-    public unsafe MmapFile(string path, int size)
+    public Span<byte> Span => memoryOwner.GetSpan();
+    public Memory<byte> Memory => memoryOwner.Memory;
+    public MmapFile(string path, int size)
     {
         Size = size;
-        _mmapFile = MemoryMappedFile.CreateFromFile(path, FileMode.OpenOrCreate, null, size);
-        MemoryOwner = _mmapFile.CreateMemoryAccessor(0, size);
+        mmapFile = MemoryMappedFile.CreateFromFile(path, FileMode.OpenOrCreate, null, size);
+        memoryOwner = CreateMemoryAccessor(0, size);
     }
     public void Flush()
     {
-        MemoryOwner.Flush();
+        memoryOwner.Flush();
     }
     public void Dispose()
     {
-        MemoryOwner.Dispose();
-        _mmapFile.Dispose();
+        memoryOwner.Dispose();
+        mmapFile.Dispose();
+    }
+    internal MappedMemoryOwner CreateMemoryAccessor(long offset = 0, int size = 0, MemoryMappedFileAccess access = MemoryMappedFileAccess.ReadWrite)
+    {
+        if (offset < 0L)
+            throw new ArgumentOutOfRangeException(nameof(offset));
+        if (size < 0)
+            throw new ArgumentOutOfRangeException(nameof(size));
+
+        return new MappedMemoryOwner(mmapFile.CreateViewAccessor(offset, size, access));
     }
 }

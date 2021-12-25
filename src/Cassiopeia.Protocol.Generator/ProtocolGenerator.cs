@@ -140,7 +140,7 @@ namespace Cassiopeia.Protocol.Generator
         private static MemberDeclarationSyntax[] GenerateStaticIDs(DeclContext ctx)
         {
             var ids = GetProtocolAttrConstructorParams(ctx.Declaration);
-            
+
             return new[]
             {
                 SF.PropertyDeclaration(

@@ -1,4 +1,5 @@
-﻿using Cassiopeia.Protocol.Serialization;
+﻿using Cassiopeia.Buffers;
+using Cassiopeia.Protocol.Serialization;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 
@@ -15,7 +16,7 @@ namespace Cassiopeia.Protocol
          */
         public static void WriteMessageWithHeader<T>(IBufferWriter<byte> output, in T message) where T : IProtocolSerializer<T>
         {
-            var writer = new ProtocolWriter(output);
+            var writer = new BufferWriter(output);
             WriteMessageWithHeader(ref writer, message, commit: true);
         }
         /*
@@ -25,7 +26,7 @@ namespace Cassiopeia.Protocol
          * Size: int
          * Message: original message
          */
-        public static void WriteMessageWithHeader<T>(ref ProtocolWriter writer, in T message, bool commit = false) where T : IProtocolSerializer<T>
+        public static void WriteMessageWithHeader<T>(ref BufferWriter writer, in T message, bool commit = false) where T : IProtocolSerializer<T>
         {
             writer.WriteInt16(T.GroupId);
             writer.WriteInt16(T.Id);
@@ -42,7 +43,7 @@ namespace Cassiopeia.Protocol
         {
             message = default;
             position = default;
-            var reader = new ProtocolReader(input);
+            var reader = new BufferReader(input);
             if (!T.TryParse(ref reader, out message))
             {
                 return false;

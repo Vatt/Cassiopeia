@@ -5,6 +5,6 @@ public class CassiopeiaProtocolAttribute : Attribute
 {
     public CassiopeiaProtocolAttribute(byte GroupId, byte Id)
     {
-        
+
     }
 }

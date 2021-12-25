@@ -1,16 +1,14 @@
-﻿using Cassiopeia.Protocol;
+﻿using Cassiopeia.Buffers;
+using Cassiopeia.Protocol;
 using Cassiopeia.Protocol.Messages;
-using Cassiopeia.Protocol.Serialization;
 using Microsoft.AspNetCore.Connections;
 using System.Buffers;
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Runtime.Versioning;
 
 namespace Cassiopeia.Core.Network;
 
 
-[RequiresPreviewFeatures]
 internal class ConnectionDispatcher
 {
     private readonly struct HandshakeResult
@@ -153,10 +151,10 @@ internal class ConnectionDispatcher
     }
     private static MessageHeader ReadHeader(ReadOnlySequence<byte> input, out SequencePosition consumed)
     {
-        var reader = new ProtocolReader(input);
-        reader.TryGetInt16(out var groupId);
-        reader.TryGetInt16(out var id);
-        reader.TryGetInt32(out var size);
+        var reader = new BufferReader(input);
+        reader.TryReadInt16(out var groupId);
+        reader.TryReadInt16(out var id);
+        reader.TryReadInt32(out var size);
         consumed = reader.Position;
         return new MessageHeader(groupId, id, size);
     }

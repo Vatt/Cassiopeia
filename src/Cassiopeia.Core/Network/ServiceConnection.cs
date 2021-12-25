@@ -1,10 +1,8 @@
 ﻿using Cassiopeia.Protocol.Messages;
 using Microsoft.AspNetCore.Connections;
-using System.Runtime.Versioning;
 
 namespace Cassiopeia.Core.Network;
 
-[RequiresPreviewFeatures]
 internal class ServiceConnection : Connection
 {
     private ServerHello _serverInfo;

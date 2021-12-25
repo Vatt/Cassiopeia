@@ -10,8 +10,8 @@ public partial class ProtocolGenerator
 {
     private static SyntaxToken TryParseToken = Identifier("TryParse");
     private static SyntaxToken WriteToken = Identifier("Write");
-    private static readonly TypeSyntax ProtocolReaderType = SF.ParseTypeName("Cassiopeia.Protocol.Serialization.ProtocolReader");
-    private static readonly TypeSyntax ProtocoWriterType = SF.ParseTypeName("Cassiopeia.Protocol.Serialization.ProtocolWriter");
+    private static readonly TypeSyntax ProtocolReaderType = SF.ParseTypeName("Cassiopeia.Buffers.BufferReader");
+    private static readonly TypeSyntax ProtocoWriterType = SF.ParseTypeName("Cassiopeia.Buffers.BufferWriter");
     private static SyntaxToken TryParseOutVarToken => Identifier("message");
     private static SyntaxToken WriterInputVarToken => Identifier("message");
     private static MemberDeclarationSyntax TryParseMethod(DeclContext ctx)
@@ -126,22 +126,22 @@ public partial class ProtocolGenerator
         switch (ctx.TypeSym.SpecialType)
         {
             case SpecialType.System_Int16:
-                expr = TryGetInt16(variable);
+                expr = TryReadInt16(variable);
                 return true;
             case SpecialType.System_Int32:
-                expr = TryGetInt32(variable);
+                expr = TryReadInt32(variable);
                 return true;
             case SpecialType.System_Int64:
-                expr = TryGetInt64(variable);
+                expr = TryReadInt64(variable);
                 return true;
             case SpecialType.System_Byte:
-                expr = TryGetByte(variable);
+                expr = TryReadByte(variable);
                 return true;
             case SpecialType.System_String:
-                expr = TryGetString(variable);
+                expr = TryReadString(variable);
                 return true;
             case SpecialType.System_Boolean:
-                expr = TryGetBoolean(variable);
+                expr = TryReadBoolean(variable);
                 return true;
             default: return false;
         }

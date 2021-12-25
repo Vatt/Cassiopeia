@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Cassiopeia.Buffers\Cassiopeia.Buffers.csproj" />
     <ProjectReference Include="..\..\src\Cassiopeia.Connections\Cassiopeia.Connections.csproj" />
     <ProjectReference Include="..\..\src\Cassiopeia.Core\Cassiopeia.Core.csproj" />
     <ProjectReference Include="..\..\src\Cassiopeia.IO\Cassiopeia.IO.csproj" />

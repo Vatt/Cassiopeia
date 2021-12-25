@@ -6,37 +6,37 @@ namespace Cassiopeia.Protocol.Generator;
 
 public partial class ProtocolGenerator
 {
-    private static readonly SyntaxToken ProtocolReaderToken = SF.Identifier("ProtocolReader");
-    public static ExpressionSyntax TryGetInt16(ExpressionSyntax assignOrDecl)
+    private static readonly SyntaxToken ProtocolReaderToken = SF.Identifier("reader");
+    public static ExpressionSyntax TryReadInt16(ExpressionSyntax assignOrDecl)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetInt16"), OutArgument(assignOrDecl));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadInt16"), OutArgument(assignOrDecl));
     }
-    public static ExpressionSyntax TryGetInt32(ExpressionSyntax assignOrDecl)
+    public static ExpressionSyntax TryReadInt32(ExpressionSyntax assignOrDecl)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetInt32"), OutArgument(assignOrDecl));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadInt32"), OutArgument(assignOrDecl));
     }
-    public static ExpressionSyntax TryGetInt32(SyntaxToken target)
+    public static ExpressionSyntax TryReadInt32(SyntaxToken target)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetInt32"), OutArgument(IdentifierName(target)));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadInt32"), OutArgument(IdentifierName(target)));
     }
-    public static ExpressionSyntax TryGetInt64(ExpressionSyntax assignOrDecl)
+    public static ExpressionSyntax TryReadInt64(ExpressionSyntax assignOrDecl)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetInt64"), OutArgument(assignOrDecl));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadInt64"), OutArgument(assignOrDecl));
     }
-    public static ExpressionSyntax TryGetInt64(SyntaxToken target)
+    public static ExpressionSyntax TryReadInt64(SyntaxToken target)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetInt64"), OutArgument(IdentifierName(target)));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadInt64"), OutArgument(IdentifierName(target)));
     }
-    public static ExpressionSyntax TryGetString(ExpressionSyntax assignOrDecl)
+    public static ExpressionSyntax TryReadString(ExpressionSyntax assignOrDecl)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetString"), OutArgument(assignOrDecl));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadString"), OutArgument(assignOrDecl));
     }
-    public static ExpressionSyntax TryGetByte(ExpressionSyntax assignOrDecl)
+    public static ExpressionSyntax TryReadByte(ExpressionSyntax assignOrDecl)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetByte"), OutArgument(assignOrDecl));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadByte"), OutArgument(assignOrDecl));
     }
-    public static ExpressionSyntax TryGetBoolean(ExpressionSyntax assignOrDecl)
+    public static ExpressionSyntax TryReadBoolean(ExpressionSyntax assignOrDecl)
     {
-        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryGetBoolean"), OutArgument(assignOrDecl));
+        return InvocationExpr(ProtocolReaderToken, SF.IdentifierName("TryReadBoolean"), OutArgument(assignOrDecl));
     }
 }

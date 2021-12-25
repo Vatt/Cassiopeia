@@ -1,15 +1,8 @@
 ﻿using Cassiopeia.Protocol.Messages;
-using Cassiopeia.Protocol.Serialization;
 using Microsoft.AspNetCore.Connections;
-using System.Buffers;
-using System.IO.Pipelines;
-using System.Runtime.Versioning;
 
 namespace Cassiopeia.Core.Network;
-delegate void WriteDelegate(ref ProtocolWriter writer);
-delegate bool TryParseDelegate(ref ProtocolReader reader);
 
-[RequiresPreviewFeatures]
 internal class ClientConnection : Connection
 {
     private ClientHello clientInfo;
@@ -18,22 +11,8 @@ internal class ClientConnection : Connection
         clientInfo = client;
     }
 
-    public override async Task Run()
+    public override Task Run()
     {
-        var incoming = ProcessIncoming();
-        var outgoing = ProcessOutgoing();
-        await Task.WhenAll(incoming, outgoing);
-    }
-    private async Task ProcessIncoming()
-    {
-        var input = Transport.Input;
-        while (true)
-        {
-
-        }
-    }
-    private async Task ProcessOutgoing()
-    {
-        
+        return Task.CompletedTask;
     }
 }

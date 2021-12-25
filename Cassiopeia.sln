@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cassiopeia.Core", "src\Cass
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cassiopeia.IO", "src\Cassiopeia.IO\Cassiopeia.IO.csproj", "{89061583-4407-4C08-A5F7-AAE121AB34AD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cassiopeia.Buffers", "src\Cassiopeia.Buffers\Cassiopeia.Buffers.csproj", "{9E942F50-D1D4-4184-8078-064897B32775}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,10 @@ Global
 		{89061583-4407-4C08-A5F7-AAE121AB34AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89061583-4407-4C08-A5F7-AAE121AB34AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89061583-4407-4C08-A5F7-AAE121AB34AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E942F50-D1D4-4184-8078-064897B32775}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E942F50-D1D4-4184-8078-064897B32775}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E942F50-D1D4-4184-8078-064897B32775}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E942F50-D1D4-4184-8078-064897B32775}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +80,7 @@ Global
 		{92C652A4-749E-4517-94F7-0AED9AB084AB} = {2327B2D8-5D9E-4A73-B24C-91C12203313D}
 		{3C532489-EA5B-40A9-87DE-54E1DEC11D1F} = {2327B2D8-5D9E-4A73-B24C-91C12203313D}
 		{89061583-4407-4C08-A5F7-AAE121AB34AD} = {2327B2D8-5D9E-4A73-B24C-91C12203313D}
+		{9E942F50-D1D4-4184-8078-064897B32775} = {2327B2D8-5D9E-4A73-B24C-91C12203313D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1A2391FC-DE3D-49BA-9EB7-9C82E0A644BB}

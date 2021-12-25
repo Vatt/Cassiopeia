@@ -6,7 +6,7 @@ namespace Cassiopeia.Protocol.Generator;
 
 public partial class ProtocolGenerator
 {
-    private static readonly SyntaxToken ProtocolWriterToken = SF.Identifier("ProtocolWriter");
+    private static readonly SyntaxToken ProtocolWriterToken = SF.Identifier("writer");
     public static ExpressionSyntax WriteInt16(ExpressionSyntax name)
     {
         return InvocationExpr(ProtocolWriterToken, IdentifierName("WriteInt16"), Argument(name));

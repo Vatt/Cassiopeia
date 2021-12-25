@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
-using System.Runtime.Versioning;
 
 namespace Cassiopeia.Core.Network;
 
-[RequiresPreviewFeatures]
 public class ConnectionListener
 {
     private readonly IConnectionListener _listener;

@@ -1,46 +1,40 @@
 ﻿using Cassiopeia.IO.Mmap;
-using Microsoft.Win32.SafeHandles;
-using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.IO.MemoryMappedFiles;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Cassiopeia.IO;
 
-public class FileSequence
+public partial class FileSequence
 {
-    private readonly long _fileSize;
-    private readonly string _destFolder;
-    private readonly string _nameTemplate;
-    private int _nextId = 0;
-    private int _readId = 0;
-    private MmapFile _writerHead;
-    private MmapFile _readerHead;
-    private long _headSize;
+    private readonly long fileSize;
+    private readonly string destFolder;
+    private readonly string nameTemplate;
+    private int nextId = 0;
+    private MmapFile writerHead;
+    private int writerHeadPosition;
+    private int readerHeadPosition;
+    private Span<byte> writerHeadSpan => writerHead.Span.Slice(writerHeadPosition);
+    private Memory<byte> writerHeadMemory => writerHead.Memory.Slice(writerHeadPosition);
+    public SequentialFileWriter SequentialWriter => new SequentialFileWriter(this);
     private string NewFileName()
     {
-        var name = $"{_destFolder}/{_nameTemplate}{_nextId}";
-        _nextId += 1;
+        var name = $"{destFolder}/{nameTemplate}{nextId}";
+        nextId += 1;
         return name;
     }
     public FileSequence(string destFolder, string nameTemplate, long fileSize)
     {
-        _fileSize = fileSize;
-        _destFolder = destFolder;
-        _nameTemplate = nameTemplate;
+        this.fileSize = fileSize;
+        this.destFolder = destFolder;
+        this.nameTemplate = nameTemplate;
         List<string> files = new List<string>();
-        if (!Directory.Exists(_destFolder))
+        if (!Directory.Exists(this.destFolder))
         {
-            Directory.CreateDirectory(_destFolder);
+            Directory.CreateDirectory(this.destFolder);
         }
         else
         {
-            foreach (var file in Directory.GetFiles(_destFolder))
+            foreach (var file in Directory.GetFiles(this.destFolder))
             {
-                if (file.Contains(_nameTemplate))
+                if (file.Contains(this.nameTemplate))
                 {
                     files.Add(file);
                 }
@@ -48,8 +42,8 @@ public class FileSequence
         }
         files.Sort((string name1, string name2) =>
         {
-            var idx1 = int.Parse(name1.Substring(name1.LastIndexOf(_nameTemplate) + _nameTemplate.Length));
-            var idx2 = int.Parse(name2.Substring(name2.LastIndexOf(_nameTemplate) + _nameTemplate.Length));
+            var idx1 = int.Parse(name1.Substring(name1.LastIndexOf(this.nameTemplate) + this.nameTemplate.Length));
+            var idx2 = int.Parse(name2.Substring(name2.LastIndexOf(this.nameTemplate) + this.nameTemplate.Length));
             if (idx1 > idx2)
             {
                 return 1;
@@ -63,63 +57,62 @@ public class FileSequence
         {
             var first = files[0];
             var last = files.Last();
-            _nextId = files.Count;
-            _readId = int.Parse(first.Substring(first.LastIndexOf(_nameTemplate) + _nameTemplate.Length));
-            _writerHead = new MmapFile(last, (int)_fileSize);
-            _readerHead = new MmapFile(first, (int)_fileSize);
+            nextId = files.Count;
+            writerHead = new MmapFile(last, (int)this.fileSize);
+            writerHeadPosition = writerHead.Memory.Length;//error
         }
         else
         {
             var newFileName = NewFileName();
-            _writerHead = new MmapFile(newFileName, (int)_fileSize);
-            _readerHead = _writerHead;
+            writerHead = new MmapFile(newFileName, (int)this.fileSize);
+            writerHeadPosition = 0;
         }
-        _headSize = _writerHead.Memory.Length;
-    } 
-    public void WriteAsync(Memory<byte> data)
+
+    }
+    private void WriterHeadAdvance(int count)
     {
-        //var free = _fileSize - _writeHead.Length; 
-        var free = _fileSize - _headSize; 
-        if (free < data.Length)
+        var position = writerHeadPosition;
+        var newPosition = position + count;
+        if (newPosition > fileSize)
         {
-            //await _writerHead.WriteAsync(data.Slice(0, (int)free)).ConfigureAwait(false);
-            var headMem = _writerHead.Memory.Slice((int)_headSize);
-            data.Slice(0, (int)free).CopyTo(headMem);
-            //await _writerHead.FlushAsync().ConfigureAwait(false);
-            _writerHead.Flush();
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+        if (newPosition == fileSize)
+        {
             var newHeadName = NewFileName();
-            var newHead = new MmapFile(newHeadName, (int)_fileSize);
-            _writerHead.Dispose();
-            //await _writerHead.DisposeAsync().ConfigureAwait(false);
-            var tail = data.Slice((int)free);
-            //await newHead.WriteAsync(tail).ConfigureAwait(false);
-            tail.CopyTo(newHead.Memory);
-            _writerHead = newHead;
-            _headSize = tail.Length;
+            var newHead = new MmapFile(newHeadName, (int)fileSize);
+            writerHead.Flush();
+            writerHead.Dispose(); // ???
+            writerHead = newHead;
+            writerHeadPosition = 0;
         }
         else
         {
-            //await _writerHead.WriteAsync(data).ConfigureAwait(false);
-            data.CopyTo(_writerHead.Memory.Slice((int)_headSize));
-            _headSize += data.Length;
+            writerHeadPosition += count;
         }
+
+
     }
-    //public async ValueTask<int> ReadAsync(Memory<byte> data)
+    //private void Write(Memory<byte> data)
     //{
-    //    var first = await _readerHead.ReadAsync(data).ConfigureAwait(false);
-    //    if (first < data.Length)
-    //    { 
-    //        if (_readId == _nextId)
-    //        {
-    //            return first;
-    //        }
-    //        File.Delete($"{_destFolder}/{_nameTemplate}{--_readId}");
-    //        var newFile = new FileStream($"{_destFolder}/{_nameTemplate}{_readId}", FileMode.Open, FileAccess.Read);
-    //        _readId += 1;
-    //        var second = await newFile.ReadAsync(data.Slice(first)).ConfigureAwait(false);
-    //        _readerHead = newFile;
-    //        return first + second;
+    //    var free = fileSize - writerHeadPosition;
+    //    if (free < data.Length)
+    //    {
+    //        var headMem = writerHead.Memory.Slice((int)writerHeadPosition);
+    //        data.Slice(0, (int)free).CopyTo(headMem);
+    //        writerHead.Flush();
+    //        var newHeadName = NewFileName();
+    //        var newHead = new MmapFile(newHeadName, (int)fileSize);
+    //        writerHead.Dispose();
+    //        var tail = data.Slice((int)free);
+    //        tail.CopyTo(newHead.Memory);
+    //        writerHead = newHead;
+    //        writerHeadPosition = tail.Length;
     //    }
-    //    return first;
+    //    else
+    //    {
+    //        data.CopyTo(writerHead.Memory.Slice((int)writerHeadPosition));
+    //        writerHeadPosition += data.Length;
+    //    }
     //}
 }

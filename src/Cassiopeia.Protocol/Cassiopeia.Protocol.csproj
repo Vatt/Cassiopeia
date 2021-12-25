@@ -15,6 +15,7 @@
     <PackageReference Include="System.IO.Pipelines" Version="6.0.0" />
   </ItemGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\Cassiopeia.Buffers\Cassiopeia.Buffers.csproj" />
 		<ProjectReference Include="..\Cassiopeia.Protocol.Generator\Cassiopeia.Protocol.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 </Project>

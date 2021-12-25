@@ -1,21 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using System;
-using Cassiopeia.Connections.Transport.Sockets.Client;
-using Cassiopeia.IO.Mmap;
-using Cassiopeia.Protocol;
-using Cassiopeia.Protocol.Messages;
-using Cassiopeia.Protocol.Serialization;
-using FASTER.core;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Win32.SafeHandles;
-using System.Buffers;
-using System.Net;
+using Cassiopeia.Buffers;
 using Cassiopeia.IO;
 
-const int fileSize = 1 * 1024 * 1024 * 1024;
+const int fileSize = 10 * 1024;// * 1024 * 1024;
 Memory<byte> data = new byte[1025];
 for (int i = 0; i < data.Length; i++)
 {
@@ -28,10 +16,13 @@ for (int i = 0; i < data.Length; i++)
         data.Span[i] = (byte)((byte)i % (byte)255);
     }
 }
-var seq = new FileSequence($"{Environment.CurrentDirectory}/FileSequence", "CassiopeiaChunk", fileSize);
-for (int i = 0; i < 10240000; i++)
+var seq = new FileSequence($"{Environment.CurrentDirectory}/FileSequence", "FSeqChunk", fileSize);
+var output = seq.SequentialWriter;
+var writer = new BufferWriter(output);
+//for (int i = 0; i < 10240000; i++)
+for (int i = 0; i < 20; i++)
 {
-    seq.WriteAsync(data);
+    writer.WriteBytes(data.Span);
 }
 //MmapFile file = new MmapFile($"{Environment.CurrentDirectory}/FileSequence/CassiopeiaChunk", fileSize);
 //var span = file.Span;
