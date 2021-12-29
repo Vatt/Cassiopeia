@@ -170,6 +170,7 @@ public ref struct BufferWriter
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBytes(ReadOnlySpan<byte> source)
     {
+        WriteInt32(source.Length);// TODO: ???
         if (source.TryCopyTo(_span))
         {
             Advance(source.Length);
@@ -191,7 +192,6 @@ public ref struct BufferWriter
             Advance(writable);
         }
     }
-
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteByte(byte value)
@@ -310,6 +310,7 @@ public ref struct BufferWriter
             }
         } while (!value.IsEmpty);
     }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBoolean(bool value)
     {

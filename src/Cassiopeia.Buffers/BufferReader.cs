@@ -14,6 +14,11 @@ public ref struct BufferReader
     {
         _input = new SequenceReader<byte>(sequence);
     }
+    public BufferReader(Memory<byte> memory) 
+        : this(new ReadOnlySequence<byte>(memory))
+    {
+
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryReadByte(out byte value)
@@ -97,7 +102,7 @@ public ref struct BufferReader
         var length = ReadInt32();
         if (_input.Remaining < length)
         {
-            throw new ArgumentOutOfRangeException(nameof(length)); //TODO:
+            ThrowArgumentOutOfRangeException(nameof(length)); //TODO:
         }
         var stringLength = length;
         if (_input.UnreadSpan.Length >= stringLength)
@@ -134,7 +139,7 @@ public ref struct BufferReader
             _input.Advance(stringLength + 1);
             return Encoding.UTF8.GetString(data);
         }
-        throw new ArgumentOutOfRangeException(nameof(stringLength));
+        return ThrowArgumentOutOfRangeException<string>(nameof(stringLength));
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryReadBoolean(out bool value)
@@ -167,6 +172,21 @@ public ref struct BufferReader
         }
         value = new byte[len];
         _input.TryCopyTo(value.Span);
+        _input.Advance(len);
+        return true;
+    }
+    public bool TryReadBytesTo(Memory<byte> value)
+    {
+        if (!TryReadInt32(out var len))
+        {
+            return false;
+        }
+        if (len > _input.Remaining)
+        {
+            return false;
+        }
+        _input.TryCopyTo(value.Span);
+        _input.Advance(len);
         return true;
     }
     public Memory<byte> ReadBytes()
@@ -174,11 +194,39 @@ public ref struct BufferReader
         var len = ReadInt32();
         if (len > _input.Remaining)
         {
-            throw new ArgumentOutOfRangeException(nameof(len)); //TODO:
+            ThrowArgumentOutOfRangeException(nameof(len)); 
         }
         Memory<byte> value = new byte[len];
         _input.TryCopyTo(value.Span);
+        _input.Advance(len);
         return value;
+    }
+    public void ReadBytesTo(in Memory<byte> value)
+    {
+        var len = ReadInt32();
+        if (len < value.Length)
+        {
+            ThrowArgumentOutOfRangeException(nameof(value));
+        }
+        if (len > _input.Remaining)
+        {
+            ThrowArgumentOutOfRangeException(nameof(len));
+        }
+        _input.TryCopyTo(value.Span);
+        _input.Advance(len);
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    [DoesNotReturn]
+    private T ThrowArgumentOutOfRangeException<T>(string msg)
+    {
+        throw new ArgumentOutOfRangeException(msg);
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    [DoesNotReturn]
+    private void ThrowArgumentOutOfRangeException(string msg)
+    {
+        throw new ArgumentOutOfRangeException(msg);
     }
 }
 

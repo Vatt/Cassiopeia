@@ -2,35 +2,118 @@
 
 using Cassiopeia.Buffers;
 using Cassiopeia.IO;
+using Cassiopeia.IO.FileSequence;
 
-const int fileSize = 10 * 1024;// * 1024 * 1024;
-Memory<byte> data = new byte[1025];
-for (int i = 0; i < data.Length; i++)
+await Runner.RunSingleDriveE();
+//await Runner.RunOnDriveD();
+//await Runner.RunOnDriveE();
+static class Runner
 {
-    if (i == 0)
+    public static int FileSize = 100 * 1024 * 1024;// * 1024;
+    public static Memory<byte> Data = new byte[1025];
+    public static Task RunSingleDriveE()
     {
-        data.Span[0] = 0;
+        return RunSequence($"E:/Cassiopeia/FileSequence");
     }
-    else
+    public static Task RunSingleDriveD()
     {
-        data.Span[i] = (byte)((byte)i % (byte)255);
+        return RunSequence($"D:/Cassiopeia/FileSequence");
+    }
+    public static Task RunOnDriveE()
+    {
+        CancellationTokenSource cts = new();
+        return Task.WhenAll(RunSequence($"E:/Cassiopeia/FileSequence0", cts), RunSequence($"E:/Cassiopeia/FileSequence1", cts),
+                            RunSequence($"E:/Cassiopeia/FileSequence2", cts), RunSequence($"E:/Cassiopeia/FileSequence3", cts),
+                            RunSequence($"E:/Cassiopeia/FileSequence4", cts), RunSequence($"E:/Cassiopeia/FileSequence5", cts));
+    }
+    public static Task RunOnDriveD()
+    {
+        CancellationTokenSource cts = new();
+        return Task.WhenAll(RunSequence($"D:/Cassiopeia/FileSequence0", cts), RunSequence($"D:/Cassiopeia/FileSequence1", cts),
+                            RunSequence($"D:/Cassiopeia/FileSequence2", cts), RunSequence($"D:/Cassiopeia/FileSequence3", cts),
+                            RunSequence($"D:/Cassiopeia/FileSequence4", cts), RunSequence($"D:/Cassiopeia/FileSequence5", cts));
+    }
+    public static Task RunSequence(string path, CancellationTokenSource? source = null)
+    {
+        FileSequence Sequence = new FileSequence(path, "Chunk", FileSize);
+        CancellationTokenSource cts = source ?? new();
+        var reader = Reader(Sequence, cts);
+        var writer = Writer(Sequence, cts);
+        return Task.WhenAll(reader, writer);
+    }
+    public static Task Writer(FileSequence sequence, CancellationTokenSource source)
+    {
+        return Task.Run(() =>
+        {
+            var cts = source;
+            var token = cts.Token;
+            var seq = sequence;
+            var writer = new BufferWriter(seq.SequentialWriter);
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    writer.WriteBytes(Data.Span);
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                    cts.Cancel();
+                }                
+            }
+        });
+    }
+
+    public static Task Reader(FileSequence sequence, CancellationTokenSource source)
+    {
+        return Task.Run(() =>
+        {
+            var cts = source;
+            var token = cts.Token;
+            var seq = sequence;
+            Memory<byte> buffer = new byte[1025];
+            var ros = seq.ReadSequence;
+            var reader = new BufferReader(ros);
+            while (!token.IsCancellationRequested)
+            {
+                //try
+                //{
+                //    var ros = seq.ReadSequence;
+                //    if (ros.Length < buffer.Length + 4)
+                //    {
+                //        continue;
+                //    }
+                //    var reader = new BufferReader(ros);
+                //    reader.ReadBytesTo(buffer);
+                //    seq.Advance(reader.Position);
+                //}
+                //catch(Exception ex)
+                //{
+                //    Console.WriteLine(ex.ToString());
+                //    cts.Cancel();
+                //}
+                
+                //if (ros.Length < buffer.Length + 4)
+                //{
+                //    continue;
+                //}
+                
+                if (reader.TryReadBytesTo(buffer))
+                {
+                    seq.Advance(reader.Position);
+                }
+                else
+                {
+                    ros = seq.ReadSequence;
+                    reader = new BufferReader(ros);
+                }
+                
+            }
+        });
+
     }
 }
-var seq = new FileSequence($"{Environment.CurrentDirectory}/FileSequence", "FSeqChunk", fileSize);
-var output = seq.SequentialWriter;
-var writer = new BufferWriter(output);
-//for (int i = 0; i < 10240000; i++)
-for (int i = 0; i < 20; i++)
-{
-    writer.WriteBytes(data.Span);
-}
-//MmapFile file = new MmapFile($"{Environment.CurrentDirectory}/FileSequence/CassiopeiaChunk", fileSize);
-//var span = file.Span;
-//for(var i = 0; i < fileSize; i++)
-//{
-//    span[i] = 255;
-//}
-//file.Dispose();
+
 struct TestData
 {
     public string TestStr = "Test";

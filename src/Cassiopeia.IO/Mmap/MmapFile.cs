@@ -7,11 +7,13 @@ public class MmapFile : IDisposable
     private readonly MemoryMappedFile mmapFile;
     private unsafe MappedMemoryOwner memoryOwner;
     public int Size { get; }
+    public string Path { get; }
     public Span<byte> Span => memoryOwner.GetSpan();
     public Memory<byte> Memory => memoryOwner.Memory;
     public MmapFile(string path, int size)
     {
         Size = size;
+        Path = path;
         mmapFile = MemoryMappedFile.CreateFromFile(path, FileMode.OpenOrCreate, null, size);
         memoryOwner = CreateMemoryAccessor(0, size);
     }
