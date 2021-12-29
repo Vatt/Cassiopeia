@@ -97,16 +97,25 @@ static class Runner
                 //{
                 //    continue;
                 //}
+                ros = seq.ReadSequence;
                 
-                if (reader.TryReadBytesTo(buffer))
+                if (ros.Length < buffer.Length + 4)
                 {
-                    seq.Advance(reader.Position);
+                    continue;
                 }
-                else
-                {
-                    ros = seq.ReadSequence;
-                    reader = new BufferReader(ros);
-                }
+                reader = new BufferReader(ros);
+                reader.ReadBytesTo(buffer);
+                seq.Advance(reader.Position);
+                
+                //if (reader.TryReadBytesTo(buffer))
+                //{
+                //    seq.Advance(reader.Position);
+                //}
+                //else
+                //{
+                //    ros = seq.ReadSequence;
+                //    reader = new BufferReader(ros);
+                //}
                 
             }
         });
