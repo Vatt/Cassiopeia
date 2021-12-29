@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 namespace Cassiopeia.IO.FileSequence;
 public class FileSequence
 {
+    private readonly object _lock = new object();
     private readonly long _fileSize;
     private readonly string _destFolder;
     private readonly string _nameTemplate;
@@ -16,7 +17,7 @@ public class FileSequence
     private Span<byte> _writerHeadSpan => _writerHeadMemory.Span;
     private Memory<byte> _writerHeadMemory => _writerSegment.WritableMemory.Slice(_writerSegment.WriterPosition);
     public SequentialFileWriter SequentialWriter => new SequentialFileWriter(this);
-    public ReadOnlySequence<byte> ReadSequence => new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
+    public ReadOnlySequence<byte> ReadSequence => BuildSequence();// new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
     //public ReadOnlySequence<byte> ReadSequence => new ReadOnlySequence<byte>(_readerSegment,0, _writerSegment, _writerSegment.WriterPosition);
     private FileSegment NewFileSegment(FileSegment? prev)
     {
@@ -91,46 +92,63 @@ public class FileSequence
     }
     private void WriterHeadAdvance(int count)
     {
-        _writerSegment.AdvanceWritePosition(count);
-        if (_writerSegment.WriterPosition == _fileSize - 8)
+        lock (_lock)
         {
-            var newHead = NewFileSegment(_writerSegment);
-            _writerSegment.Flush();
-            //_writerSegment.Dispose();
-            _writerSegment = newHead;
+            _writerSegment.AdvanceWritePosition(count);
+            if (_writerSegment.WriterPosition == _fileSize - 8)
+            {
+                var newHead = NewFileSegment(_writerSegment);
+                _writerSegment.Flush();
+                //_writerSegment.Dispose();
+                _writerSegment = newHead;
+            }
         }
+
     }
     public void Advance(SequencePosition position)
     {
-        var segment = (FileSegment)position.GetObject()!;
-        var count = position.GetInteger();// - (int)segment.RunningIndex;
-        if (segment.Id == _readerSegment.Id)
+        lock (_lock)
         {
-            segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
-            return;
-        }
-        var remaining = count;
-        do
-        {
-            var next = (FileSegment)_readerSegment.Next!;
-            var rem = _readerSegment.WriterPosition - _readerSegment.ReaderPosition;
-            //_readerSegment.AdvanceReadPosition(rem);
-            _readerSegment.Dispose();
-            _readerSegment.UnlinkNext();
-            File.Delete(_readerSegment.File.Path);
-            _readerSegment = next;
+            var segment = (FileSegment)position.GetObject()!;
+            var count = position.GetInteger();// - (int)segment.RunningIndex;
+            if (segment.Id == _readerSegment.Id)
+            {
+                segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
+                return;
+            }
+            var remaining = count;
+            do
+            {
+                var next = (FileSegment)_readerSegment.Next!;
+                var rem = _readerSegment.WriterPosition - _readerSegment.ReaderPosition;
+                //_readerSegment.AdvanceReadPosition(rem);
+                _readerSegment.Dispose();
+                _readerSegment.UnlinkNext();
+                File.Delete(_readerSegment.File.Path);
+                _readerSegment = next;
 
-        } while (_readerSegment.Id != segment.Id);
-        segment.AdvanceReadPosition(count);
-        if (segment.ReaderPosition == segment.WritableSize)
+            } while (_readerSegment.Id != segment.Id);
+            segment.AdvanceReadPosition(count);
+            if (segment.ReaderPosition == segment.WritableSize)
+            {
+                Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
+                File.Delete(segment.File.Path);
+            }
+        }
+
+
+    }
+    private ReadOnlySequence<byte> BuildSequence()
+    {
+        lock (_lock)
         {
-            Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
-            File.Delete(segment.File.Path);
+            return new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
         }
     }
 
     private class FileSegment : ReadOnlySequenceSegment<byte>, IDisposable
     {
+        
         public int WritableSize { get; }
         public long Id { get; }
         public MmapFile File { get; }
