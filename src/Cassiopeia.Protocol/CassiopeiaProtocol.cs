@@ -14,9 +14,11 @@ namespace Cassiopeia.Protocol
          * Size: int
          * Message: original message
          */
-        public static void WriteMessageWithHeader<T>(IBufferWriter<byte> output, in T message) where T : IProtocolSerializer<T>
+        public static void WriteMessageWithHeader<TWriter,TMessage>(TWriter output, in TMessage message) 
+            where TWriter : IBufferWriter<byte>
+            where TMessage : IProtocolSerializer<TMessage>
         {
-            var writer = new BufferWriter(output);
+            var writer = new BufferWriter<TWriter>(output);
             WriteMessageWithHeader(ref writer, message, commit: true);
         }
         /*
@@ -26,13 +28,15 @@ namespace Cassiopeia.Protocol
          * Size: int
          * Message: original message
          */
-        public static void WriteMessageWithHeader<T>(ref BufferWriter writer, in T message, bool commit = false) where T : IProtocolSerializer<T>
+        public static void WriteMessageWithHeader<TWriter, TMessage>(ref BufferWriter<TWriter> writer, in TMessage message, bool commit = false)
+            where TWriter : IBufferWriter<byte>
+            where TMessage : IProtocolSerializer<TMessage>
         {
-            writer.WriteInt16(T.GroupId);
-            writer.WriteInt16(T.Id);
+            writer.WriteInt16(TMessage.GroupId);
+            writer.WriteInt16(TMessage.Id);
             var reserved = writer.Reserve(4);
             var checkpoint = writer.Written;
-            T.Write(ref writer, message);
+            TMessage.Write(ref writer, message);
             reserved.Write(writer.Written - checkpoint);
             if (commit)
             {

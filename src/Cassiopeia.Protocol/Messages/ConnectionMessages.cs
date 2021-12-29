@@ -1,4 +1,7 @@
-﻿using Cassiopeia.Protocol.Attributes;
+﻿using System.Buffers;
+using Cassiopeia.Buffers;
+using Cassiopeia.Protocol.Attributes;
+using Cassiopeia.Protocol.Serialization;
 
 namespace Cassiopeia.Protocol.Messages;
 

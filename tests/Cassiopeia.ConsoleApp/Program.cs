@@ -3,6 +3,7 @@
 using Cassiopeia.Buffers;
 using Cassiopeia.IO;
 using Cassiopeia.IO.FileSequence;
+using static Cassiopeia.IO.FileSequence.FileSequence;
 
 await Runner.RunSingleDriveE();
 //await Runner.RunOnDriveD();
@@ -48,7 +49,7 @@ static class Runner
             var cts = source;
             var token = cts.Token;
             var seq = sequence;
-            var writer = new BufferWriter(seq.SequentialWriter);
+            var writer = new BufferWriter<SequentialFileWriter>(seq.SequentialWriter);
             while (!token.IsCancellationRequested)
             {
                 try
