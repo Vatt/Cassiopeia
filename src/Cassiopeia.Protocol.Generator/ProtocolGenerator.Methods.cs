@@ -8,10 +8,12 @@ namespace Cassiopeia.Protocol.Generator;
 
 public partial class ProtocolGenerator
 {
+    private static string TWritterString = "TWritter";
+    private static SyntaxToken TWriterTypeArgToken = Identifier(TWritterString);
     private static SyntaxToken TryParseToken = Identifier("TryParse");
     private static SyntaxToken WriteToken = Identifier("Write");
-    private static readonly TypeSyntax ProtocolReaderType = SF.ParseTypeName("Cassiopeia.Buffers.BufferReader");
-    private static readonly TypeSyntax ProtocoWriterType = SF.ParseTypeName("Cassiopeia.Buffers.BufferWriter");
+    private static readonly TypeSyntax BufferReaderType = SF.ParseTypeName("Cassiopeia.Buffers.BufferReader");
+    private static readonly TypeSyntax BufferWriterType = GenericName(Identifier("Cassiopeia.Buffers.BufferWriter"), SF.ParseTypeName(TWritterString));
     private static SyntaxToken TryParseOutVarToken => Identifier("message");
     private static SyntaxToken WriterInputVarToken => Identifier("message");
     private static MemberDeclarationSyntax TryParseMethod(DeclContext ctx)
@@ -19,10 +21,10 @@ public partial class ProtocolGenerator
         return SF.MethodDeclaration(
                     attributeLists: default,
                     modifiers: new(PublicKeyword(), StaticKeyword()),
-                    explicitInterfaceSpecifier: default,//SF.ExplicitInterfaceSpecifier(GenericName(SerializerInterfaceToken, TypeFullName(decl))),
+                    explicitInterfaceSpecifier: default,
                     returnType: BoolPredefinedType(),
                     identifier: TryParseToken,
-                    parameterList: ParameterList(RefParameter(ProtocolReaderType, ProtocolReaderToken),
+                    parameterList: ParameterList(RefParameter(BufferReaderType, ProtocolReaderToken),
                                                  OutParameter(TypeFullName(ctx.Declaration), TryParseOutVarToken)),
                     body: default,
                     constraintClauses: default,
@@ -34,19 +36,19 @@ public partial class ProtocolGenerator
     private static MemberDeclarationSyntax WriteMethod(DeclContext ctx)
     {
         return SF.MethodDeclaration(
-        attributeLists: default,
-        modifiers: new(PublicKeyword(), StaticKeyword()),
-        explicitInterfaceSpecifier: default,// SF.ExplicitInterfaceSpecifier(GenericName(SerializerInterfaceToken, TypeFullName(ctx.Declaration))),
-        returnType: VoidPredefinedType(),
-        identifier: WriteToken,
-        parameterList: ParameterList(
-            RefParameter(ProtocoWriterType, ProtocolWriterToken),
-            InParameter(TypeFullName(ctx.Declaration), TryParseOutVarToken)),
-        body: default,
-        constraintClauses: default,
-        expressionBody: default,
-        typeParameterList: default,
-        semicolonToken: default)
+            attributeLists: default,
+            modifiers: new(PublicKeyword(), StaticKeyword()),
+            explicitInterfaceSpecifier: default,
+            returnType: VoidPredefinedType(),
+            identifier: WriteToken,
+            parameterList: ParameterList(
+                RefParameter(BufferWriterType, ProtocolWriterToken),
+                InParameter(TypeFullName(ctx.Declaration), TryParseOutVarToken)),
+            body: default,
+            constraintClauses: new(SF.TypeParameterConstraintClause(IdentifierName(TWriterTypeArgToken), SeparatedList(SF.TypeConstraint(TypeFullName(IBufferWriterOfByteTypeSym))))),
+            expressionBody: default,
+            typeParameterList: SF.TypeParameterList(SeparatedList(SF.TypeParameter(TWriterTypeArgToken))),
+            semicolonToken: default)
     .WithBody(SF.Block(WriteStatements(ctx)));
     }
     private static StatementSyntax[] WriteStatements(DeclContext ctx)
