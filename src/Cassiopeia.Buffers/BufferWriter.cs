@@ -6,9 +6,9 @@ using System.Text;
 
 namespace Cassiopeia.Buffers;
 
-public ref struct BufferWriter
+public ref struct BufferWriter<T> where T : IBufferWriter<byte>
 {
-    private IBufferWriter<byte> _output;
+    private T _output;
     private Span<byte> _span;
 #if DEBUG
     private Span<byte> _origin;
@@ -115,7 +115,7 @@ public ref struct BufferWriter
         return new Reserved(first, second);
     }
 
-    public BufferWriter(IBufferWriter<byte> output)
+    public BufferWriter(T output)
     {
         _output = output;
         _span = _output.GetSpan();
