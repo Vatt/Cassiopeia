@@ -203,7 +203,7 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt16(short value)
     {
-        if (BinaryPrimitives.TryWriteInt32LittleEndian(_span, value))
+        if (BinaryPrimitives.TryWriteInt16LittleEndian(_span, value))
         {
             Advance(sizeof(short));
             return;
@@ -287,11 +287,34 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
             return;
         }
 
-        SlowWriteString(value);
+        SlowWriteString(value, count);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private void SlowWriteString(ReadOnlySpan<char> value)
+    private void SlowWriteString(ReadOnlySpan<char> value, int bytesCount)
+    {
+        if (bytesCount < 512)
+        {
+            Span<byte> data = stackalloc byte[bytesCount];
+            Encoding.UTF8.GetBytes(value, data);
+            while (data.Length > 0)
+            {
+                var writable = Math.Min(data.Length, _span.Length);
+                data.Slice(0, writable).CopyTo(_span);
+                data = data.Slice(writable);
+                Advance(writable);
+            }
+        }
+        else
+        {
+            var raw = ArrayPool<byte>.Shared.Rent(bytesCount);
+            Span<byte> data = raw.AsSpan().Slice(0, bytesCount);
+            SlowWriteBytes(data);
+            ArrayPool<byte>.Shared.Return(raw);
+        }
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void SlowWriteString_1(ReadOnlySpan<char> value)
     {
         if (_span.Length < 4)
         {

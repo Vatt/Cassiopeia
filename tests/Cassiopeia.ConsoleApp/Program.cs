@@ -3,6 +3,8 @@
 using Cassiopeia.Buffers;
 using Cassiopeia.IO;
 using Cassiopeia.IO.FileSequence;
+using Cassiopeia.Protocol.Messages;
+using System.Diagnostics;
 using static Cassiopeia.IO.FileSequence.FileSequence;
 
 await Runner.RunSingleDriveE();
@@ -12,6 +14,8 @@ static class Runner
 {
     public static int FileSize = 100 * 1024 * 1024;// * 1024;
     public static Memory<byte> Data = new byte[1025];
+    //public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
+    public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
     public static Task RunSingleDriveE()
     {
         return RunSequence($"E:/Cassiopeia/FileSequence");
@@ -50,11 +54,18 @@ static class Runner
             var token = cts.Token;
             var seq = sequence;
             var writer = new BufferWriter<SequentialFileWriter>(seq.SequentialWriter);
+            var iteration = 0;
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    writer.WriteBytes(Data.Span);
+                    iteration += 1;
+                    //if (iteration == 426979)
+                    //{
+                    //    Debugger.Break();
+                    //}
+                    ClientHello.Write(ref writer, Hello);
+                    writer.Commit();
                 }
                 catch(Exception ex)
                 {
@@ -72,81 +83,29 @@ static class Runner
             var cts = source;
             var token = cts.Token;
             var seq = sequence;
-            Memory<byte> buffer = new byte[1025];
             var ros = seq.ReadSequence;
             var reader = new BufferReader(ros);
+            var iteration = 0;
             while (!token.IsCancellationRequested)
             {
-                //try
-                //{
-                //    var ros = seq.ReadSequence;
-                //    if (ros.Length < buffer.Length + 4)
-                //    {
-                //        continue;
-                //    }
-                //    var reader = new BufferReader(ros);
-                //    reader.ReadBytesTo(buffer);
-                //    seq.Advance(reader.Position);
-                //}
-                //catch(Exception ex)
-                //{
-                //    Console.WriteLine(ex.ToString());
-                //    cts.Cancel();
-                //}
-                
-                //if (ros.Length < buffer.Length + 4)
-                //{
-                //    continue;
-                //}
-                ros = seq.ReadSequence;
-                
-                if (ros.Length < buffer.Length + 4)
+                iteration += 1;
+                reader = new BufferReader(seq.ReadSequence);
+                if (ClientHello.TryParse(ref reader, out var hello))
                 {
-                    continue;
+                    seq.Advance(reader.Position);
+                    
+                    if (hello.Equals(Hello) == false)
+                    {
+                        throw new Exception("CORRUPTION");
+                    }
                 }
-                reader = new BufferReader(ros);
-                reader.ReadBytesTo(buffer);
-                seq.Advance(reader.Position);
-                
-                //if (reader.TryReadBytesTo(buffer))
-                //{
-                //    seq.Advance(reader.Position);
-                //}
-                //else
-                //{
-                //    ros = seq.ReadSequence;
-                //    reader = new BufferReader(ros);
-                //}
-                
+                else
+                {
+                    ros = seq.ReadSequence;
+                    reader = new BufferReader(ros);
+                }                
             }
         });
 
-    }
-}
-
-struct TestData
-{
-    public string TestStr = "Test";
-    public int Size = 1025;
-    public Memory<byte> TestBytes = new byte[1025];
-    public TestData()
-    {
-        TestStr = "Test";
-        Size = 1025;
-        TestBytes = new byte[Size];
-        byte val = 0;
-        for (var i = 0; i < Size; i++)
-        {
-            TestBytes.Span[i] = val;
-            if (val == byte.MaxValue)
-            {
-                val = 0;
-            }
-            else
-            {
-                val += 1;
-            }
-
-        }
     }
 }

@@ -57,7 +57,7 @@ public ref struct BufferReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ReadInt32()
     {
-        var value = BinaryPrimitives.ReadInt32LittleEndian(_input.UnreadSpan);
+        var value =  BinaryPrimitives.ReadInt32LittleEndian(_input.UnreadSpan);
         _input.Advance(sizeof(int));
         return value;
     }
@@ -156,7 +156,7 @@ public ref struct BufferReader
         return false;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryReadBoolean()
+    public bool ReadBoolean()
     {
         return ReadByte() == 1;
     }
