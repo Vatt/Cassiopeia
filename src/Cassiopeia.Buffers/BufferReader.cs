@@ -103,7 +103,7 @@ public ref struct BufferReader
         var length = ReadInt32();
         if (_input.Remaining < length)
         {
-            ThrowArgumentOutOfRangeException(nameof(length)); //TODO:
+            ThrowArgumentOutOfRangeException(nameof(length)); 
         }
         var stringLength = length;
         if (_input.UnreadSpan.Length >= stringLength)
@@ -123,7 +123,7 @@ public ref struct BufferReader
         if (_input.Remaining >= stringLength)
         {
             var data = _input.UnreadSequence.Slice(0, stringLength);
-            _input.Advance(stringLength + 1);
+            _input.Advance(stringLength);
             value = Encoding.UTF8.GetString(data);
             return true;
         }

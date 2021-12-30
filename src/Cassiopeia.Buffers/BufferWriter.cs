@@ -160,6 +160,7 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
         _buffered += count;
         _written += count;
         _span = _span.Slice(count);
+        Commit();
         if (_span.IsEmpty)
         {
             GetNextSpan();
@@ -223,6 +224,8 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
         Advance(rem);
         buffer.Slice(rem).CopyTo(_span);
         Advance(sizeof(short) - rem);
+        //test
+        Commit();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -248,6 +251,8 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
         Advance(rem);
         buffer.Slice(rem).CopyTo(_span);
         Advance(sizeof(int) - rem);
+        //test
+        Commit();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -312,6 +317,8 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
             SlowWriteBytes(data);
             ArrayPool<byte>.Shared.Return(raw);
         }
+        //test
+        Commit();
     }
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void SlowWriteString_1(ReadOnlySpan<char> value)

@@ -92,8 +92,8 @@ public class FileSequence
     }
     private void WriterHeadAdvance(int count)
     {
-        lock (_lock)
-        {
+        //lock (_lock)
+        //{
             _writerSegment.AdvanceWritePosition(count);
             if (_writerSegment.WriterPosition == _fileSize - 8)
             {
@@ -102,13 +102,13 @@ public class FileSequence
                 //_writerSegment.Dispose();
                 _writerSegment = newHead;
             }
-        }
+        //}
 
     }
     public void Advance(SequencePosition position)
     {
-        lock (_lock)
-        {
+        //lock (_lock)
+        //{
             var segment = (FileSegment)position.GetObject()!;
             var count = position.GetInteger();// - (int)segment.RunningIndex;
             if (segment.Id == _readerSegment.Id)
@@ -134,16 +134,16 @@ public class FileSequence
                 Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
                 File.Delete(segment.File.Path);
             }
-        }
+        //}
 
 
     }
     private ReadOnlySequence<byte> BuildSequence()
     {
-        lock (_lock)
-        {
+        //lock (_lock)
+        //{
             return new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
-        }
+        //}
     }
 
     private class FileSegment : ReadOnlySequenceSegment<byte>, IDisposable
@@ -243,6 +243,10 @@ public class FileSequence
         public Span<byte> GetSpan(int sizeHint = 0)
         {
             return sequence._writerHeadSpan;
+        }
+        public void Flush()
+        {
+
         }
     }
 }

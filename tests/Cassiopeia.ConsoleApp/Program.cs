@@ -7,15 +7,16 @@ using Cassiopeia.Protocol.Messages;
 using System.Diagnostics;
 using static Cassiopeia.IO.FileSequence.FileSequence;
 
-await Runner.RunSingleDriveE();
+//await Runner.RunSingleDriveE();
 //await Runner.RunOnDriveD();
-//await Runner.RunOnDriveE();
+await Runner.RunOnDriveE();
 static class Runner
 {
     public static int FileSize = 100 * 1024 * 1024;// * 1024;
+    //public static int FileSize = 1 * 1024 * 1024 * 1024;
     public static Memory<byte> Data = new byte[1025];
-    //public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
-    public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
+    public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
+   // public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
     public static Task RunSingleDriveE()
     {
         return RunSequence($"E:/Cassiopeia/FileSequence");
@@ -59,8 +60,8 @@ static class Runner
             {
                 try
                 {
-                    iteration += 1;
-                    //if (iteration == 426979)
+                    //iteration += 1;
+                    //if (iteration == 353056)
                     //{
                     //    Debugger.Break();
                     //}
@@ -85,25 +86,34 @@ static class Runner
             var seq = sequence;
             var ros = seq.ReadSequence;
             var reader = new BufferReader(ros);
-            var iteration = 0;
+            //var iteration = 0;
             while (!token.IsCancellationRequested)
             {
-                iteration += 1;
-                reader = new BufferReader(seq.ReadSequence);
-                if (ClientHello.TryParse(ref reader, out var hello))
+                try
                 {
-                    seq.Advance(reader.Position);
-                    
-                    if (hello.Equals(Hello) == false)
+                    //iteration += 1;
+                    //reader = new BufferReader(seq.ReadSequence);
+                    if (ClientHello.TryParse(ref reader, out var hello))
                     {
-                        throw new Exception("CORRUPTION");
+                        seq.Advance(reader.Position);
+
+                        if (hello.Equals(Hello) == false)
+                        {
+                            throw new Exception("CORRUPTION");
+                        }
+                    }
+                    else
+                    {
+                        ros = seq.ReadSequence;
+                        reader = new BufferReader(ros);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    ros = seq.ReadSequence;
-                    reader = new BufferReader(ros);
-                }                
+                    Console.WriteLine(ex.Message);
+                    cts.Cancel();
+                }
+           
             }
         });
 
