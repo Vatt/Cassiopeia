@@ -8,7 +8,9 @@ namespace Cassiopeia.Buffers;
 
 public ref struct BufferWriter<T> where T : IBufferWriter<byte>
 {
-    private T _output;
+
+    //private T _output;
+    internal T _output;
     private Span<byte> _span;
 #if DEBUG
     private Span<byte> _origin;
@@ -160,7 +162,6 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
         _buffered += count;
         _written += count;
         _span = _span.Slice(count);
-        Commit();
         if (_span.IsEmpty)
         {
             GetNextSpan();
@@ -171,7 +172,7 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBytes(ReadOnlySpan<byte> source)
     {
-        WriteInt32(source.Length);// TODO: ???
+        WriteInt32(source.Length);
         if (source.TryCopyTo(_span))
         {
             Advance(source.Length);
@@ -197,7 +198,7 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteByte(byte value)
     {
-        _span[0] = value; //???
+        _span[0] = value; 
         Advance(1);
     }
 
@@ -224,8 +225,6 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
         Advance(rem);
         buffer.Slice(rem).CopyTo(_span);
         Advance(sizeof(short) - rem);
-        //test
-        Commit();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -251,8 +250,6 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
         Advance(rem);
         buffer.Slice(rem).CopyTo(_span);
         Advance(sizeof(int) - rem);
-        //test
-        Commit();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -317,8 +314,6 @@ public ref struct BufferWriter<T> where T : IBufferWriter<byte>
             SlowWriteBytes(data);
             ArrayPool<byte>.Shared.Return(raw);
         }
-        //test
-        Commit();
     }
     [MethodImpl(MethodImplOptions.NoInlining)]
     private void SlowWriteString_1(ReadOnlySpan<char> value)

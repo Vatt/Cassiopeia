@@ -7,9 +7,9 @@ using Cassiopeia.Protocol.Messages;
 using System.Diagnostics;
 using static Cassiopeia.IO.FileSequence.FileSequence;
 
-//await Runner.RunSingleDriveE();
+await Runner.RunSingleDriveE();
+//await Runner.RunOnDriveE();
 //await Runner.RunOnDriveD();
-await Runner.RunOnDriveE();
 static class Runner
 {
     public static int FileSize = 100 * 1024 * 1024;// * 1024;
@@ -54,23 +54,21 @@ static class Runner
             var cts = source;
             var token = cts.Token;
             var seq = sequence;
-            var writer = new BufferWriter<SequentialFileWriter>(seq.SequentialWriter);
+            var bufferWritter = seq.SequentialWriter;
+            var writer = new BufferWriter<SequentialFileWriter>(bufferWritter);
             var iteration = 0;
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    //iteration += 1;
-                    //if (iteration == 353056)
-                    //{
-                    //    Debugger.Break();
-                    //}
+                    iteration += 1;
                     ClientHello.Write(ref writer, Hello);
-                    writer.Commit();
+                    writer.Flush();
                 }
                 catch(Exception ex)
                 {
-                    Console.WriteLine(ex.ToString());
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.StackTrace);
                     cts.Cancel();
                 }                
             }
@@ -86,34 +84,57 @@ static class Runner
             var seq = sequence;
             var ros = seq.ReadSequence;
             var reader = new BufferReader(ros);
-            //var iteration = 0;
+            var allIteration = 0;
+            var successIterations = 0;
+            var failedIterations = 0;
             while (!token.IsCancellationRequested)
             {
-                try
-                {
-                    //iteration += 1;
-                    //reader = new BufferReader(seq.ReadSequence);
-                    if (ClientHello.TryParse(ref reader, out var hello))
-                    {
-                        seq.Advance(reader.Position);
+                //try
+                //{
+                //    allIteration += 1;
+                //    //reader = new BufferReader(seq.ReadSequence);
+                //    if (ClientHello.TryParse(ref reader, out var hello))
+                //    {
+                //        successIterations += 1;
+                //        seq.Advance(reader.Position);
 
-                        if (hello.Equals(Hello) == false)
-                        {
-                            throw new Exception("CORRUPTION");
-                        }
-                    }
-                    else
-                    {
-                        ros = seq.ReadSequence;
-                        reader = new BufferReader(ros);
-                    }
-                }
-                catch (Exception ex)
+                //        if (hello.Equals(Hello) == false)
+                //        {
+                //            throw new Exception("CORRUPTION");
+                //        }
+                //    }
+                //    else
+                //    {
+                //        failedIterations += 1;
+                //        ros = seq.ReadSequence;
+                //        reader = new BufferReader(ros);
+                //    }
+                //}
+                //catch (Exception ex)
+                //{
+                //    Console.WriteLine(ex.Message);
+                //    Console.WriteLine(ex.StackTrace);
+                //    cts.Cancel();
+                //}
+                allIteration += 1;
+                //reader = new BufferReader(seq.ReadSequence);
+                if (ClientHello.TryParse(ref reader, out var hello))
                 {
-                    Console.WriteLine(ex.Message);
-                    cts.Cancel();
+                    successIterations += 1;
+                    seq.Advance(reader.Position);
+
+                    if (hello.Equals(Hello) == false)
+                    {
+                        throw new Exception("CORRUPTION");
+                    }
                 }
-           
+                else
+                {
+                    failedIterations += 1;
+                    ros = seq.ReadSequence;
+                    reader = new BufferReader(ros);
+                }
+
             }
         });
 

@@ -52,6 +52,11 @@ public ref struct BufferReader
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryReadInt32(out int value)
     {
+        if (_input.UnreadSpan.Length == 0)
+        {
+            value = default;
+            return false;
+        }
         return _input.TryReadLittleEndian(out value);
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

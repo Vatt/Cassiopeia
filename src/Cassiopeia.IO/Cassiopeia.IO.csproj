@@ -7,4 +7,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Cassiopeia.Buffers\Cassiopeia.Buffers.csproj" />
+  </ItemGroup>
+
 </Project>
