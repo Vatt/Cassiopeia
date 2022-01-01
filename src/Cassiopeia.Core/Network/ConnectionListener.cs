@@ -54,11 +54,11 @@ public class ConnectionListener
                         break;
                     }
                     _log.ConnectionAccepted(connection.ConnectionId);
-                    //_ = ConnectionDispatcher.OnConnectedAsync(connection, _connectionManager, _log);
-                    var id = _connectionManager.GetNewConnectionId();
-                    var newConnection = new ClientConnection(default, id, connection, _connectionManager, _log);
-                    _connectionManager.AddConnection(id, newConnection);
-                    ThreadPool.UnsafeQueueUserWorkItem(newConnection, preferLocal: false);
+                    _ = ConnectionDispatcher.OnConnectedAsync(connection, _connectionManager, _log);
+                    //var id = _connectionManager.GetNewConnectionId();
+                    //var newConnection = new ClientConnection(default, id, connection, _connectionManager, _log);
+                    //_connectionManager.AddConnection(id, newConnection);
+                    //ThreadPool.UnsafeQueueUserWorkItem(newConnection, preferLocal: false);
                 }
             }
             catch (Exception ex)

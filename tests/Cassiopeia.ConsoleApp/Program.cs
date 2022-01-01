@@ -7,8 +7,8 @@ using Cassiopeia.Protocol.Messages;
 using System.Diagnostics;
 using static Cassiopeia.IO.FileSequence.FileSequence;
 
-await Runner.RunSingleDriveE();
-//await Runner.RunOnDriveE();
+//await Runner.RunSingleDriveE();
+await Runner.RunOnDriveE();
 //await Runner.RunOnDriveD();
 static class Runner
 {
