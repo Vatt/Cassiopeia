@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Cassiopeia.IO.FileSequence;
-public class FileSequence
+public class MmapFileSequence
 {
     private readonly object _lock = new object();
     private readonly long _fileSize;
@@ -14,7 +14,7 @@ public class FileSequence
     private int _nextId = 0;
     private FileSegment _readerSegment;
     private FileSegment _writerSegment;
-    public SequentialFileWriter SequentialWriter => new SequentialFileWriter(this);
+    public FileWriter SequentialWriter => new FileWriter(this);
     public ReadOnlySequence<byte> ReadSequence => BuildSequence();
     private ReadOnlySequence<byte> BuildSequence()
     {
@@ -39,7 +39,7 @@ public class FileSequence
         _nextId += 1;
         return segment;
     }
-    public FileSequence(string destFolder, string nameTemplate, long fileSize)
+    public MmapFileSequence(string destFolder, string nameTemplate, long fileSize)
     {
         _fileSize = fileSize;
         _destFolder = destFolder;
@@ -218,7 +218,7 @@ public class FileSequence
             throw new ArgumentOutOfRangeException(msg);
         }
     }
-    public struct SequentialFileWriter : IBufferWriter<byte>
+    public struct FileWriter : IBufferWriter<byte>
     {
         private enum State
         {
@@ -226,13 +226,13 @@ public class FileSequence
             Head,
             Tail,
         }
-        private readonly FileSequence sequence;
+        private readonly MmapFileSequence sequence;
         private FileSegment _current;
         private FileSegment? head;
         private FileSegment? tail;
         private int? _buffered;
         private State _state;
-        public SequentialFileWriter(FileSequence sequence)
+        public FileWriter(MmapFileSequence sequence)
         {
             this.sequence = sequence;
             _current = sequence._writerSegment;
@@ -325,6 +325,7 @@ public class FileSequence
         {
             return GetMemory().Span;
         }
+        //TODO: собирать отдельно секвенсу на базе старой а потом переприсваивать
         public void Flush()
         {
             if (_state == State.Current)
