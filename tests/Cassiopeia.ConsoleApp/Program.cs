@@ -8,21 +8,42 @@ using Cassiopeia.Protocol.Messages;
 using System.Buffers;
 using System.Diagnostics;
 
-await Runner.RunSingleAsyncDriveE();
-//await Runner.RunSingleMmapDriveE();
+//await Runner.RunSingleAsyncDriveE();
+//await Runner.RunSingleAsyncDriveD();
+//await Runner.RunAsyncOnDriveD();
+await Runner.RunSingleMmapDriveE();
+//await Runner.RunSingleMmapDriveD();
 //await Runner.RunMmapOnDriveE();
 //await Runner.RunMmapOnDriveD();
 static class Runner
 {
     public static MemoryPool<byte> MemoryPool = new PinnedBlockMemoryPool();
-    //public static int FileSize = 100 * 1024 * 1024;// * 1024;
-    public static int FileSize = 1 * 1024 * 1024 * 1024;
+    public static int FileSize = 100 * 1024 * 1024;
+    //public static int FileSize = 1 * 1024 * 1024 * 1024;
     public static Memory<byte> Data = new byte[1025];
     public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
     // public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
     public static Task RunSingleAsyncDriveE()
     {
         return RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence");
+    }
+    public static Task RunSingleAsyncDriveD()
+    {
+        return RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence");
+    }
+    public static Task RunAsyncOnDriveE()
+    {
+        CancellationTokenSource cts = new();
+        return Task.WhenAll(RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence0", cts), RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence1", cts),
+                            RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence2", cts), RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence3", cts),
+                            RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence4", cts), RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence5", cts));
+    }
+    public static Task RunAsyncOnDriveD()
+    {
+        CancellationTokenSource cts = new();
+        return Task.WhenAll(RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence0", cts), RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence1", cts),
+                            RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence2", cts), RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence3", cts),
+                            RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence4", cts), RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence5", cts));
     }
     public static async Task RunAsyncSequence(string path, CancellationTokenSource? source = null)
     {
@@ -65,7 +86,8 @@ static class Runner
         void Write(AsyncFileSequence.AsyncFileWriter output)
         {
             var writer = new BufferWriter<AsyncFileSequence.AsyncFileWriter>(output);
-            ClientHello.Write(ref writer, Hello);
+            //ClientHello.Write(ref writer, Hello);
+            writer.WriteBytes(Data.Span);
             writer.Commit();
         }
     }
@@ -95,9 +117,9 @@ static class Runner
     {
         MmapFileSequence Sequence = new MmapFileSequence(path, "Chunk", FileSize);
         CancellationTokenSource cts = source ?? new();
-        //var reader = MmapReader(Sequence, cts);
+        var reader = MmapReader(Sequence, cts);
         var writer = MmapWriter(Sequence, cts);
-        return Task.WhenAll(/*reader,*/ writer);
+        return Task.WhenAll(reader, writer);
     }
     public static Task MmapWriter(MmapFileSequence sequence, CancellationTokenSource source)
     {
@@ -115,6 +137,7 @@ static class Runner
                 {
                     iteration += 1;
                     ClientHello.Write(ref writer, Hello);
+                    //writer.WriteBytes(Data.Span);
                     writer.Flush();
                 }
                 catch(Exception ex)

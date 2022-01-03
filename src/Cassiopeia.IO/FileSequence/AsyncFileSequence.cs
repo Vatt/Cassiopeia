@@ -29,7 +29,7 @@ public class AsyncFileSequence
         _fileSize = fileSize;
         //Handle = File.OpenHandle(NewName(), FileMode.Create, FileAccess.Write, FileShare.Write,FileOptions.Asynchronous, fileSize);
         //Stream = new FileStream(Handle, FileAccess.Write, 4096, true);
-        Stream = new FileStream(NewName(), FileMode.Append, FileAccess.Write, FileShare.Write, 4096, true);
+        Stream = new FileStream(NewName(), FileMode.Append, FileAccess.Write, FileShare.Write, 4096 * 10, true);
     }
     private string NewName()
     {
@@ -93,10 +93,11 @@ public class AsyncFileSequence
                 var tail = memory.Slice((int)rem);
                 //Handle.Close();
                 //Handle.Dispose();
+                await Stream.FlushAsync().ConfigureAwait(false);
                 await Stream.DisposeAsync().ConfigureAwait(false);
                 //Handle = File.OpenHandle(NewName(), FileMode.Create, FileAccess.Write, FileShare.Write, FileOptions.Asynchronous, _fileSize);
                 //Stream = new FileStream(Handle, FileAccess.Write, 4096, true);
-                Stream = new FileStream(NewName(), FileMode.Append, FileAccess.Write, FileShare.Write, 4096, true);
+                Stream = new FileStream(NewName(), FileMode.Append, FileAccess.Write, FileShare.Write);//, 4096, true);
                 await Stream.WriteAsync(tail).ConfigureAwait(false);
                 Offset = tail.Length;
                 segment.Data.Dispose();// FOR TEST!!!!
