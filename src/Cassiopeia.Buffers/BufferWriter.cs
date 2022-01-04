@@ -9,8 +9,7 @@ namespace Cassiopeia.Buffers
     public ref struct BufferWriter<T> where T : IBufferWriter<byte>
     {
 
-        //private T _output;
-        internal T _output;
+        private T _output;
         private Span<byte> _span;
 #if DEBUG
         private Span<byte> _origin;
@@ -148,14 +147,6 @@ namespace Cassiopeia.Buffers
             _span = _output.GetSpan(sizeHint);
         }
 
-        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        //private void GetNextSpanWithoutCommit()
-        //{
-        //    _buffered = 0;
-        //    _span = _output.GetSpan();
-        //}
-
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Advance(int count)
         {
@@ -235,7 +226,6 @@ namespace Cassiopeia.Buffers
                 Advance(sizeof(int));
                 return;
             }
-
             SlowWriteInt32(value);
         }
 
@@ -250,6 +240,7 @@ namespace Cassiopeia.Buffers
             Advance(rem);
             buffer.Slice(rem).CopyTo(_span);
             Advance(sizeof(int) - rem);
+            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -289,9 +280,29 @@ namespace Cassiopeia.Buffers
                 return;
             }
 
-            SlowWriteString(value, count);
+            SlowWriteString(value);
         }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void SlowWriteString(ReadOnlySpan<char> value)
+        {
+            if (_span.Length < 4)
+            {
+                GetNextSpan(4096);
+            }
+            var encoder = Encoding.UTF8.GetEncoder();
+            do
+            {
+                encoder.Convert(value, _span, true, out var charsUsedJustNow, out var bytesWrittenJustNow, out var completed);
 
+                value = value.Slice(charsUsedJustNow);
+                Advance(bytesWrittenJustNow);
+                if (completed == false && _span.Length < 4)
+                {
+                    GetNextSpan(4096);
+                }
+            } while (!value.IsEmpty);
+        }
+        /*
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void SlowWriteString(ReadOnlySpan<char> value, int bytesCount)
         {
@@ -311,30 +322,12 @@ namespace Cassiopeia.Buffers
             {
                 var raw = ArrayPool<byte>.Shared.Rent(bytesCount);
                 Span<byte> data = raw.AsSpan().Slice(0, bytesCount);
+                Encoding.UTF8.GetBytes(value, data);
                 SlowWriteBytes(data);
                 ArrayPool<byte>.Shared.Return(raw);
             }
         }
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void SlowWriteString_1(ReadOnlySpan<char> value)
-        {
-            if (_span.Length < 4)
-            {
-                GetNextSpan(4096);
-            }
-            var encoder = Encoding.UTF8.GetEncoder();
-            do
-            {
-                encoder.Convert(value, _span, true, out var charsUsedJustNow, out var bytesWrittenJustNow, out var completed);
-
-                value = value.Slice(charsUsedJustNow);
-                Advance(bytesWrittenJustNow);
-                if (completed == false)
-                {
-                    GetNextSpan();
-                }
-            } while (!value.IsEmpty);
-        }
+        */
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteBoolean(bool value)

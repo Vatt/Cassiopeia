@@ -57,7 +57,15 @@ namespace Cassiopeia.Buffers
                 value = default;
                 return false;
             }
-            return _input.TryReadLittleEndian(out value);
+            if (_input.TryReadLittleEndian(out value))
+            {
+                //if (value < 0)
+                //{
+                //    Debugger.Break();
+                //}
+                return true;
+            }
+            return false;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ReadInt32()
@@ -103,6 +111,45 @@ namespace Cassiopeia.Buffers
             value = default;
             return false;
         }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private bool SlowTryReadString(int stringLength, [MaybeNullWhen(false)] out string value)
+        {
+            
+             if (_input.Remaining >= stringLength)
+            {
+                var data = _input.UnreadSequence.Slice(0, stringLength);
+                _input.Advance(stringLength);
+                value = Encoding.UTF8.GetString(data);
+                return true;
+            }
+
+            value = default;
+            return false;
+            
+            /*
+            if (_input.Remaining < stringLength)
+            {
+                value = default;
+                return false;
+            }
+            var bytes = ArrayPool<byte>.Shared.Rent(stringLength);
+            Span<byte> bytesSpan = bytes;
+            Span<byte> span = bytesSpan.Slice(0, stringLength);
+            var offset = 0;
+            var rem = stringLength;
+            while (rem != 0)
+            {
+                var writable = Math.Min(_input.UnreadSpan.Length, rem);
+                _input.UnreadSpan.Slice(0, writable).CopyTo(span.Slice(offset, writable));
+                _input.Advance(writable);
+                offset += writable;
+                rem -= writable;
+            }
+            value = Encoding.UTF8.GetString(span);
+            ArrayPool<byte>.Shared.Return(bytes);
+            return true;
+            */
+        }
         public string ReadString()
         {
             var length = ReadInt32();
@@ -121,21 +168,7 @@ namespace Cassiopeia.Buffers
 
             return SlowReadString(stringLength);
         }
-
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private bool SlowTryReadString(int stringLength, [MaybeNullWhen(false)] out string value)
-        {
-            if (_input.Remaining >= stringLength)
-            {
-                var data = _input.UnreadSequence.Slice(0, stringLength);
-                _input.Advance(stringLength);
-                value = Encoding.UTF8.GetString(data);
-                return true;
-            }
-
-            value = default;
-            return false;
-        }
+        
         [MethodImpl(MethodImplOptions.NoInlining)]
         private string SlowReadString(int stringLength)
         {
@@ -210,14 +243,14 @@ namespace Cassiopeia.Buffers
         public void ReadBytesTo(in Memory<byte> value)
         {
             var len = ReadInt32();
-            if (len < value.Length)
+            if (len < value.Length || len > _input.Remaining)
             {
                 ThrowArgumentOutOfRangeException(nameof(value));
             }
-            if (len > _input.Remaining)
-            {
-                ThrowArgumentOutOfRangeException(nameof(len));
-            }
+            //if (len > _input.Remaining)
+            //{
+            //    ThrowArgumentOutOfRangeException(nameof(len));
+            //}
             _input.TryCopyTo(value.Span);
             _input.Advance(len);
         }

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Cassiopeia.IO.FileSequence;
-public class MmapFileSequence
+public partial class MmapFileSequence
 {
     private readonly object _lock = new object();
     private readonly long _fileSize;
@@ -14,16 +14,15 @@ public class MmapFileSequence
     private int _nextId = 0;
     private FileSegment _readerSegment;
     private FileSegment _writerSegment;
-    public FileWriter SequentialWriter => new FileWriter(this);
-    public ReadOnlySequence<byte> ReadSequence { get; private set; }
-    private void BuildSequence()
+    private MemoryPool<byte> _pool;
+    public BufferedWriter SequentialWriter => new BufferedWriter(this);
+    public ReadOnlySequence<byte> ReadSequence =>  new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
+    private ReadOnlySequence<byte> GetSequence()
     {
         lock (_lock)
         {
-            ReadSequence =  new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
+            return new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
         }
-        //ReadSequence = new ReadOnlySequence<byte>(_readerSegment, _readerSegment.ReaderPosition, _writerSegment, (int)_writerSegment.WriterPosition);
-
     }
     private FileSegment NewFileSegment(FileSegment? prev)
     {
@@ -39,11 +38,12 @@ public class MmapFileSequence
         _nextId += 1;
         return segment;
     }
-    public MmapFileSequence(string destFolder, string nameTemplate, long fileSize)
+    public MmapFileSequence(string destFolder, string nameTemplate, long fileSize, MemoryPool<byte> pool)
     {
         _fileSize = fileSize;
         _destFolder = destFolder;
         _nameTemplate = nameTemplate;
+        _pool = pool;
         if (fileSize <= 32)
         {
             throw new ArgumentException(nameof(fileSize));
@@ -105,20 +105,40 @@ public class MmapFileSequence
     }
     public void Advance(SequencePosition position)
     {
+        //var segment = (FileSegment)position.GetObject()!;
+        //var count = position.GetInteger();// - (int)segment.RunningIndex;
+        //if (segment.Id == _readerSegment.Id)
+        //{
+        //    segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
+        //    return;
+        //}
+        //do
+        //{
+        //    var next = (FileSegment)_readerSegment.Next!;
+        //    _readerSegment.Dispose();
+        //    _readerSegment.UnlinkNext();
+        //    File.Delete(_readerSegment.File.Path);
+        //    _readerSegment = next;
+
+        //} while (_readerSegment.Id != segment.Id);
+        //segment.AdvanceReadPosition(count);
+        //if (segment.ReaderPosition == segment.WritableSize)
+        //{
+        //    Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
+        //    File.Delete(segment.File.Path);
+        //}
+        lock (_lock)
+        {
             var segment = (FileSegment)position.GetObject()!;
             var count = position.GetInteger();// - (int)segment.RunningIndex;
             if (segment.Id == _readerSegment.Id)
             {
                 segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
-                BuildSequence();
                 return;
             }
-            var remaining = count;
             do
             {
                 var next = (FileSegment)_readerSegment.Next!;
-                var rem = _readerSegment.WriterPosition - _readerSegment.ReaderPosition;
-                //_readerSegment.AdvanceReadPosition(rem);
                 _readerSegment.Dispose();
                 _readerSegment.UnlinkNext();
                 File.Delete(_readerSegment.File.Path);
@@ -131,7 +151,68 @@ public class MmapFileSequence
                 Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
                 File.Delete(segment.File.Path);
             }
-            BuildSequence();
+        }
+    }
+    private void Flush(List<BufferSegment> segments, int totalWritten)
+    {
+        if (_writerSegment.WriterPosition + totalWritten <= _writerSegment.WritableSize)
+        {
+            var offset = _writerSegment.WriterPosition;
+            for(int i = 0; i < segments.Count; i++)
+            {
+                var segment = segments[i];
+                var memory = segment.WrittenMemory;
+                var len = memory.Length;
+                memory.CopyTo(_writerSegment.WritableMemory.Slice(offset, len));
+                offset += len;
+                segment.Dispose();
+            }
+            _writerSegment.AdvanceWritePosition(totalWritten);
+            return;
+        }
+        FlushMultiFiles(segments, totalWritten);
+    }
+    private void FlushMultiFiles(List<BufferSegment> segments, int totalWritten)
+    {
+        lock (_lock)
+        {
+            FileSegment iterator = _writerSegment;
+            for (int i = 0; i < segments.Count; i++)
+            {
+                var segment = segments[i];
+                var memory = segment.WrittenMemory;
+                var len = memory.Length;
+                do
+                {
+                    var written = WriteTo(iterator, memory);
+                    iterator.AdvanceWritePosition(written);
+                    memory = memory.Slice(written);
+                    if (memory.IsEmpty == false)
+                    {                        
+                        iterator = NewFileSegment(iterator);
+                    }
+                } while (memory.IsEmpty == false);
+            }
+            _writerSegment = iterator;
+        }
+        int WriteTo(FileSegment segment, Memory<byte> memory)
+        {
+            var writableSize = segment.WritableSize;
+            var positioon = segment.WriterPosition;
+            var len = memory.Length;
+            if (positioon + len <= writableSize)
+            {
+                memory.CopyTo(segment.WritableMemory.Slice(positioon, len));
+                return len;
+            }
+            else
+            {
+                var writable = writableSize - positioon;
+                memory.Slice(0, writable).CopyTo(segment.WritableMemory.Slice(positioon, writable));
+                //return len - writable;
+                return writable;
+            }
+        }
     }
 
     private class FileSegment : ReadOnlySequenceSegment<byte>, IDisposable
@@ -214,155 +295,22 @@ public class MmapFileSequence
             File.Flush();
             File.Dispose();
         }
+
+        public void SHIT()
+        {
+            FileSegment iterator = this;
+            while (iterator.Next != null)
+            {
+                iterator.RunningIndex = 0;
+                FileSegment next = (FileSegment)iterator.Next;
+                next.RunningIndex = iterator.WriterPosition - iterator.ReaderPosition;
+                iterator = next;
+            }
+        }
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void ThrowArgumentOutOfRangeException(string msg)
         {
             throw new ArgumentOutOfRangeException(msg);
-        }
-    }
-    public struct FileWriter : IBufferWriter<byte>
-    {
-        private enum State
-        {
-            Current,
-            Head,
-            Tail,
-        }
-        private readonly MmapFileSequence sequence;
-        private FileSegment _current;
-        private FileSegment? head;
-        private FileSegment? tail;
-        private int? _buffered;
-        private State _state;
-        public FileWriter(MmapFileSequence sequence)
-        {
-            this.sequence = sequence;
-            _current = sequence._writerSegment;
-            _state = State.Current; 
-            head = tail = null;
-            _buffered = null;
-        }
-        public void Advance(int count)
-        {
-            switch (_state)
-            {
-                case State.Current:
-                    AdvanceCurrent(count);
-                    sequence.BuildSequence();
-                    break;
-                case State.Head:
-                    AdvanceHead(count);
-                    break;
-                case State.Tail:
-                    AdvanceTail(count);
-                    break;
-            }
-        }
-        private void AdvanceCurrent(int count)
-        {
-            Debug.Assert(_buffered.HasValue == false);
-            var newSize = _current.WriterPosition + count;
-            if (newSize < _current.WritableSize)
-            {
-                _current.AdvanceWritePosition(count);
-                return;
-            }
-            else
-            {
-                Debug.Assert(newSize == _current.WritableSize);
-                _buffered = count;
-                head = sequence.NewFileSegment(_current.RunningIndex + count, _current.WritableSize, _current.ReaderPosition);
-                _state = State.Head;    
-            }
-        }
-        private void AdvanceHead(int count)
-        {
-            Debug.Assert(tail == null && head != null);
-            Debug.Assert(_buffered.HasValue != false);
-            var newSize = head.WriterPosition + count;
-            if (head != null && newSize < head.WritableSize)
-            {
-                head.AdvanceWritePosition(count);
-            }
-            else
-            {
-                Debug.Assert(head != null && newSize == _current.WritableSize);
-                head.AdvanceWritePosition(count);
-                head.Flush();
-                tail = sequence.NewFileSegment(head);
-                _state= State.Tail;
-            }
-        }
-        private void AdvanceTail(int count)
-        {
-            Debug.Assert(tail != null);
-            var newSize = tail.WriterPosition + count;
-            if (newSize < tail.WritableSize)
-            {
-                tail.AdvanceWritePosition(count);
-            }
-            else
-            {
-                Debug.Assert(newSize == tail.WritableSize);
-                tail.AdvanceWritePosition(count);
-                tail.Flush();
-                tail = sequence.NewFileSegment(tail);
-            }
-        }
-        public Memory<byte> GetMemory(int sizeHint = 0)
-        {
-            if (_buffered.HasValue == false)
-            {
-                return _current.WritableMemory.Slice(_current.WriterPosition);
-            }
-            if (tail == null)
-            {
-                Debug.Assert(head != null);
-                return head.WritableMemory.Slice(head.WriterPosition);
-            }
-            Debug.Assert(tail != null);
-            return tail.WritableMemory.Slice(tail.WriterPosition);
-        }
-
-        public Span<byte> GetSpan(int sizeHint = 0)
-        {
-            return GetMemory().Span;
-        }
-        //TODO: собирать отдельно секвенсу на базе старой а потом переприсваивать
-        public void Flush()
-        {
-            if (_state == State.Current)
-            {
-                sequence.BuildSequence();
-                return;
-            }
-            Debug.Assert(head != null && _buffered.HasValue);
-            FileSegment newWriterSegment = head;
-            var iterator = (FileSegment)newWriterSegment.Next!;
-            newWriterSegment = head;
-            while (iterator != null)
-            {
-                newWriterSegment = iterator;
-                iterator = (FileSegment)iterator.Next!;
-            }
-            lock (sequence._lock)
-            {
-                _current.AdvanceWritePosition(_buffered.Value);
-                _current.LinkNext(head);
-                _current.Flush();
-                _current = head;
-                sequence._writerSegment = newWriterSegment;
-            }
-            //_current.AdvanceWritePosition(_buffered.Value);
-            //_current.LinkNext(head);
-            //_current.Flush();
-            //_current = head;
-            //sequence._writerSegment = newWriterSegment;
-
-            _buffered = null;
-            head = tail = null;
-            _state = State.Current;
-            sequence.BuildSequence();
         }
     }
 }

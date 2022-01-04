@@ -22,86 +22,27 @@ static class Runner
     //public static int FileSize = 1 * 1024 * 1024 * 1024;
     public static Memory<byte> Data = new byte[1025];
     public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
-    // public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
-    public static Task RunSingleAsyncDriveE()
-    {
-        return RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence");
-    }
-    public static Task RunSingleAsyncDriveD()
-    {
-        return RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence");
-    }
-    public static Task RunAsyncOnDriveE()
-    {
-        CancellationTokenSource cts = new();
-        return Task.WhenAll(RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence0", cts), RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence1", cts),
-                            RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence2", cts), RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence3", cts),
-                            RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence4", cts), RunAsyncSequence($"E:/Cassiopeia/AsyncFileSequence5", cts));
-    }
-    public static Task RunAsyncOnDriveD()
-    {
-        CancellationTokenSource cts = new();
-        return Task.WhenAll(RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence0", cts), RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence1", cts),
-                            RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence2", cts), RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence3", cts),
-                            RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence4", cts), RunAsyncSequence($"D:/Cassiopeia/AsyncFileSequence5", cts));
-    }
-    public static async Task RunAsyncSequence(string path, CancellationTokenSource? source = null)
-    {
-        AsyncFileSequence Sequence = await AsyncFileSequence.CreateAsync(MemoryPool, path, "Chunk", FileSize);
-        CancellationTokenSource cts = source ?? new();
-        //var reader = MmapReader(Sequence, cts);
-        var writer = AsyncWriter(Sequence, cts);
-        await Task.WhenAll(/*reader,*/ writer);
-    }
-    public static Task AsyncWriter(AsyncFileSequence sequence, CancellationTokenSource source)
-    {
-        return Task.Run(async () =>
-        {
-            var cts = source;
-            var token = cts.Token;
-            var seq = sequence;
-            var bufferWritter = seq.SequentialWriter;
-            
-            var iteration = 0;
-            while (!token.IsCancellationRequested)
-            {
-                try
-                {
-                    iteration += 1;
-                    //for(var i = 0; i< 10000; i++)
-                    //{
-                    //    Write(bufferWritter);
-                    //}
-                    Write(bufferWritter);
-                    await bufferWritter.FlushAsync();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    Console.WriteLine(ex.StackTrace);
-                    cts.Cancel();
-                }
-            }
-        });
-        void Write(AsyncFileSequence.AsyncFileWriter output)
-        {
-            var writer = new BufferWriter<AsyncFileSequence.AsyncFileWriter>(output);
-            //ClientHello.Write(ref writer, Hello);
-            writer.WriteBytes(Data.Span);
-            writer.Commit();
-        }
-    }
+    //public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧","👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
+    //public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "他妈的狗屎","他妈的狗屎", 42, true);
     public static Task RunSingleMmapDriveE()
     {
+        Directory.Delete("E:/Cassiopeia/FileSequence", true);
         return RunMmapSequence($"E:/Cassiopeia/FileSequence");
     }
     public static Task RunSingleMmapDriveD()
     {
+        Directory.Delete("D:/Cassiopeia/FileSequence", true);
         return RunMmapSequence($"D:/Cassiopeia/FileSequence");
     }
     public static Task RunMmapOnDriveE()
     {
         CancellationTokenSource cts = new();
+        Directory.Delete("E:/Cassiopeia/FileSequence0", true);
+        Directory.Delete("E:/Cassiopeia/FileSequence1", true);
+        Directory.Delete("E:/Cassiopeia/FileSequence2", true);
+        Directory.Delete("E:/Cassiopeia/FileSequence3", true);
+        Directory.Delete("E:/Cassiopeia/FileSequence4", true);
+        Directory.Delete("E:/Cassiopeia/FileSequence5", true);
         return Task.WhenAll(RunMmapSequence($"E:/Cassiopeia/FileSequence0", cts), RunMmapSequence($"E:/Cassiopeia/FileSequence1", cts),
                             RunMmapSequence($"E:/Cassiopeia/FileSequence2", cts), RunMmapSequence($"E:/Cassiopeia/FileSequence3", cts),
                             RunMmapSequence($"E:/Cassiopeia/FileSequence4", cts), RunMmapSequence($"E:/Cassiopeia/FileSequence5", cts));
@@ -109,13 +50,19 @@ static class Runner
     public static Task RunMmapOnDriveD()
     {
         CancellationTokenSource cts = new();
+        Directory.Delete("D:/Cassiopeia/FileSequence0", true);
+        Directory.Delete("D:/Cassiopeia/FileSequence1", true);
+        Directory.Delete("D:/Cassiopeia/FileSequence2", true);
+        Directory.Delete("D:/Cassiopeia/FileSequence3", true);
+        Directory.Delete("D:/Cassiopeia/FileSequence4", true);
+        Directory.Delete("D:/Cassiopeia/FileSequence5", true);
         return Task.WhenAll(RunMmapSequence($"D:/Cassiopeia/FileSequence0", cts), RunMmapSequence($"D:/Cassiopeia/FileSequence1", cts),
                             RunMmapSequence($"D:/Cassiopeia/FileSequence2", cts), RunMmapSequence($"D:/Cassiopeia/FileSequence3", cts),
                             RunMmapSequence($"D:/Cassiopeia/FileSequence4", cts), RunMmapSequence($"D:/Cassiopeia/FileSequence5", cts));
     }
     public static Task RunMmapSequence(string path, CancellationTokenSource? source = null)
     {
-        MmapFileSequence Sequence = new MmapFileSequence(path, "Chunk", FileSize);
+        MmapFileSequence Sequence = new MmapFileSequence(path, "Chunk", FileSize, MemoryPool);
         CancellationTokenSource cts = source ?? new();
         var reader = MmapReader(Sequence, cts);
         var writer = MmapWriter(Sequence, cts);
@@ -129,23 +76,39 @@ static class Runner
             var token = cts.Token;
             var seq = sequence;
             var bufferWritter = seq.SequentialWriter;
-            var writer = new BufferWriter<MmapFileSequence.FileWriter>(bufferWritter);
+            //var writer = new BufferWriter<MmapFileSequence.BufferedWriter>(bufferWritter);
             var iteration = 0;
             while (!token.IsCancellationRequested)
             {
-                try
+                //try
+                //{
+                //    iteration += 1;
+                //    var writer = new BufferWriter<MmapFileSequence.BufferedWriter>(bufferWritter);
+                //    for(var i = 0; i < 100; i++)
+                //    {
+                //        ClientHello.Write(ref writer, Hello);
+                //    }                    
+                //    writer.Commit();
+                //    //writer.WriteBytes(Data.Span);
+                //    bufferWritter.Flush();
+                //}
+                //catch(Exception ex)
+                //{
+                //    Console.WriteLine(ex.Message);
+                //    Console.WriteLine(ex.StackTrace);
+                //    cts.Cancel();
+                //}
+                iteration += 1;
+                var writer = new BufferWriter<MmapFileSequence.BufferedWriter>(bufferWritter);
+                //ClientHello.Write(ref writer, Hello);
+                for (var i = 0; i < 100; i++)
                 {
-                    iteration += 1;
                     ClientHello.Write(ref writer, Hello);
-                    //writer.WriteBytes(Data.Span);
-                    writer.Flush();
                 }
-                catch(Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    Console.WriteLine(ex.StackTrace);
-                    cts.Cancel();
-                }                
+                writer.Commit();
+                //writer.WriteBytes(Data.Span);
+                //writer.Commit();
+                bufferWritter.Flush();
             }
         });
     }
@@ -162,6 +125,8 @@ static class Runner
             var allIteration = 0;
             var successIterations = 0;
             var failedIterations = 0;
+            SequencePosition? lastSuccessPosition = default;
+            var buffer = new Memory<byte>(new byte[1025]);
             while (!token.IsCancellationRequested)
             {
                 //try
@@ -194,9 +159,11 @@ static class Runner
                 allIteration += 1;
                 //reader = new BufferReader(seq.ReadSequence);
                 if (ClientHello.TryParse(ref reader, out var hello))
+                //if (reader.TryReadBytesTo(buffer))
                 {
                     successIterations += 1;
-                    seq.Advance(reader.Position);
+                    lastSuccessPosition = reader.Position;
+
 
                     if (hello.Equals(Hello) == false)
                     {
@@ -205,6 +172,11 @@ static class Runner
                 }
                 else
                 {
+                    if (lastSuccessPosition != null)
+                    {
+                        seq.Advance(lastSuccessPosition.Value);
+                    }
+                    successIterations = 0;
                     failedIterations += 1;
                     ros = seq.ReadSequence;
                     reader = new BufferReader(ros);
