@@ -105,60 +105,60 @@ public partial class MmapFileSequence
     }
     public void Advance(SequencePosition position)
     {
-        //var segment = (FileSegment)position.GetObject()!;
-        //var count = position.GetInteger();// - (int)segment.RunningIndex;
-        //if (segment.Id == _readerSegment.Id)
-        //{
-        //    segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
-        //    return;
-        //}
-        //do
-        //{
-        //    var next = (FileSegment)_readerSegment.Next!;
-        //    _readerSegment.Dispose();
-        //    _readerSegment.UnlinkNext();
-        //    File.Delete(_readerSegment.File.Path);
-        //    _readerSegment = next;
-
-        //} while (_readerSegment.Id != segment.Id);
-        //segment.AdvanceReadPosition(count);
-        //if (segment.ReaderPosition == segment.WritableSize)
-        //{
-        //    Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
-        //    File.Delete(segment.File.Path);
-        //}
-        lock (_lock)
+        var segment = (FileSegment)position.GetObject()!;
+        var count = position.GetInteger();// - (int)segment.RunningIndex;
+        if (segment.Id == _readerSegment.Id)
         {
-            var segment = (FileSegment)position.GetObject()!;
-            var count = position.GetInteger();// - (int)segment.RunningIndex;
-            if (segment.Id == _readerSegment.Id)
-            {
-                segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
-                return;
-            }
-            do
-            {
-                var next = (FileSegment)_readerSegment.Next!;
-                _readerSegment.Dispose();
-                _readerSegment.UnlinkNext();
-                File.Delete(_readerSegment.File.Path);
-                _readerSegment = next;
-
-            } while (_readerSegment.Id != segment.Id);
-            segment.AdvanceReadPosition(count);
-            if (segment.ReaderPosition == segment.WritableSize)
-            {
-                Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
-                File.Delete(segment.File.Path);
-            }
+            segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
+            return;
         }
+        do
+        {
+            var next = (FileSegment)_readerSegment.Next!;
+            _readerSegment.Dispose();
+            _readerSegment.UnlinkNext();
+            File.Delete(_readerSegment.File.Path);
+            _readerSegment = next;
+
+        } while (_readerSegment.Id != segment.Id);
+        segment.AdvanceReadPosition(count);
+        if (segment.ReaderPosition == segment.WritableSize)
+        {
+            Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
+            File.Delete(segment.File.Path);
+        }
+        //lock (_lock)
+        //{
+        //    var segment = (FileSegment)position.GetObject()!;
+        //    var count = position.GetInteger();// - (int)segment.RunningIndex;
+        //    if (segment.Id == _readerSegment.Id)
+        //    {
+        //        segment.AdvanceReadPosition(count - _readerSegment.ReaderPosition);
+        //        return;
+        //    }
+        //    do
+        //    {
+        //        var next = (FileSegment)_readerSegment.Next!;
+        //        _readerSegment.Dispose();
+        //        _readerSegment.UnlinkNext();
+        //        File.Delete(_readerSegment.File.Path);
+        //        _readerSegment = next;
+
+        //    } while (_readerSegment.Id != segment.Id);
+        //    segment.AdvanceReadPosition(count);
+        //    if (segment.ReaderPosition == segment.WritableSize)
+        //    {
+        //        Debug.Assert(segment.ReaderPosition == segment.WriterPosition && segment.ReaderPosition == segment.WritableSize && segment.ReaderPosition == segment.WritableSize);
+        //        File.Delete(segment.File.Path);
+        //    }
+        //}
     }
     private void Flush(List<BufferSegment> segments, int totalWritten)
     {
         if (_writerSegment.WriterPosition + totalWritten <= _writerSegment.WritableSize)
         {
             var offset = _writerSegment.WriterPosition;
-            for(int i = 0; i < segments.Count; i++)
+            for (int i = 0; i < segments.Count; i++)
             {
                 var segment = segments[i];
                 var memory = segment.WrittenMemory;
@@ -174,8 +174,8 @@ public partial class MmapFileSequence
     }
     private void FlushMultiFiles(List<BufferSegment> segments, int totalWritten)
     {
-        lock (_lock)
-        {
+        //lock (_lock)
+        //{
             FileSegment iterator = _writerSegment;
             for (int i = 0; i < segments.Count; i++)
             {
@@ -194,7 +194,7 @@ public partial class MmapFileSequence
                 } while (memory.IsEmpty == false);
             }
             _writerSegment = iterator;
-        }
+        //}
         int WriteTo(FileSegment segment, Memory<byte> memory)
         {
             var writableSize = segment.WritableSize;

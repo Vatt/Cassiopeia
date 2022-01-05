@@ -114,8 +114,7 @@ namespace Cassiopeia.Buffers
         [MethodImpl(MethodImplOptions.NoInlining)]
         private bool SlowTryReadString(int stringLength, [MaybeNullWhen(false)] out string value)
         {
-            
-             if (_input.Remaining >= stringLength)
+            if (_input.Remaining >= stringLength)
             {
                 var data = _input.UnreadSequence.Slice(0, stringLength);
                 _input.Advance(stringLength);

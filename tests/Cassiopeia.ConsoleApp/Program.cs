@@ -11,9 +11,10 @@ using System.Diagnostics;
 //await Runner.RunSingleAsyncDriveE();
 //await Runner.RunSingleAsyncDriveD();
 //await Runner.RunAsyncOnDriveD();
-await Runner.RunSingleMmapDriveE();
+//await Runner.RunSingleMmapDriveE();
+//await Runner.RunSingleMmapWSL();
 //await Runner.RunSingleMmapDriveD();
-//await Runner.RunMmapOnDriveE();
+await Runner.RunMmapOnDriveE();
 //await Runner.RunMmapOnDriveD();
 static class Runner
 {
@@ -24,10 +25,16 @@ static class Runner
     public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
     //public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧","👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
     //public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "他妈的狗屎","他妈的狗屎", 42, true);
+    public static Task RunSingleMmapWSL()
+    {
+        Directory.Delete("/home/gamover/Cassiopeia/FileSequence", true);
+        return RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence");
+    }
     public static Task RunSingleMmapDriveE()
     {
         Directory.Delete("E:/Cassiopeia/FileSequence", true);
         return RunMmapSequence($"E:/Cassiopeia/FileSequence");
+
     }
     public static Task RunSingleMmapDriveD()
     {
@@ -100,11 +107,11 @@ static class Runner
                 //}
                 iteration += 1;
                 var writer = new BufferWriter<MmapFileSequence.BufferedWriter>(bufferWritter);
-                //ClientHello.Write(ref writer, Hello);
-                for (var i = 0; i < 100; i++)
-                {
-                    ClientHello.Write(ref writer, Hello);
-                }
+                ClientHello.Write(ref writer, Hello);
+                //for (var i = 0; i < 46; i++)
+                //{
+                //    ClientHello.Write(ref writer, Hello);
+                //}
                 writer.Commit();
                 //writer.WriteBytes(Data.Span);
                 //writer.Commit();
@@ -125,7 +132,6 @@ static class Runner
             var allIteration = 0;
             var successIterations = 0;
             var failedIterations = 0;
-            SequencePosition? lastSuccessPosition = default;
             var buffer = new Memory<byte>(new byte[1025]);
             while (!token.IsCancellationRequested)
             {
@@ -158,13 +164,12 @@ static class Runner
                 //}
                 allIteration += 1;
                 //reader = new BufferReader(seq.ReadSequence);
+  
                 if (ClientHello.TryParse(ref reader, out var hello))
                 //if (reader.TryReadBytesTo(buffer))
                 {
                     successIterations += 1;
-                    lastSuccessPosition = reader.Position;
-
-
+                    seq.Advance(reader.Position);
                     if (hello.Equals(Hello) == false)
                     {
                         throw new Exception("CORRUPTION");
@@ -172,10 +177,6 @@ static class Runner
                 }
                 else
                 {
-                    if (lastSuccessPosition != null)
-                    {
-                        seq.Advance(lastSuccessPosition.Value);
-                    }
                     successIterations = 0;
                     failedIterations += 1;
                     ros = seq.ReadSequence;
