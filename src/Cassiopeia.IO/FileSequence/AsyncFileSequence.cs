@@ -29,11 +29,11 @@ public class AsyncFileSequence
         _fileSize = fileSize;
         //Handle = File.OpenHandle(NewName(), FileMode.Create, FileAccess.Write, FileShare.Write,FileOptions.Asynchronous, fileSize);
         //Stream = new FileStream(Handle, FileAccess.Write, 4096, true);
-        Stream = new FileStream(NewName(), FileMode.Append, FileAccess.Write, FileShare.Write, 4096 * 10, true);
+        Stream = new FileStream(NewName(), FileMode.Append, FileAccess.Write, FileShare.Write, 4096, FileOptions.WriteThrough);
     }
     private string NewName()
     {
-        var name = $"{_destFolder}/{_nameTemplate}{_nextId}";
+        var name =  $"{_destFolder}/{_nameTemplate}{_nextId}";
         _nextId += 1;
         return name;
     }
@@ -106,7 +106,7 @@ public class AsyncFileSequence
     }
     private async Task FlushAsync1(List<AsyncFileWriter.Segment> segmnents)
     {
-        for (var i = 0; i < segmnents.Count; i++)
+        for(var i = 0; i< segmnents.Count; i++)
         {
             var segment = segmnents[i];
             var memory = segment.WrittenMemory;
@@ -139,12 +139,6 @@ public class AsyncFileSequence
     }
     public class AsyncFileWriter : IBufferWriter<byte>
     {
-        private const int MaxPageSize = 4096;
-        private enum State
-        {
-            Initial,
-            Writing
-        }
         internal struct Segment
         {
             public IMemoryOwner<byte> Data;
@@ -160,58 +154,38 @@ public class AsyncFileSequence
         private readonly MemoryPool<byte> _pool;
         private List<Segment> _segments;
         private IMemoryOwner<byte>? _current = null;
-        private int _totalWritten;
-        private int _pageBuffered;
-        private int _pageRemaining;
-        private State _state;
+        private int _currentLen = 0;
         public AsyncFileWriter(AsyncFileSequence sequence)
         {
             _sequence = sequence;
             _pool = sequence.Pool;
-            _pageBuffered = 0;
-            _totalWritten = 0;
-            _pageRemaining = 0;
             _segments = new();
-            _state = State.Initial;
         }
         public void Advance(int count)
         {
-            _pageBuffered += count;
-            _totalWritten += count;
-            _pageRemaining -= count;
-            if (_pageBuffered > _current!.Memory.Length)
+            Debug.Assert(_current != null);
+            if (_currentLen + count > 4096)
             {
-                throw new ArgumentOutOfRangeException("count");
+                throw new ArgumentOutOfRangeException(nameof(count));
             }
+            _currentLen += count;
         }
 
         public Memory<byte> GetMemory(int sizeHint = 0)
         {
-            if (sizeHint > MaxPageSize)
+            if (_current != null && _current.Memory.Slice(_currentLen).Length == 0)
             {
-                ThrowArgumentException(nameof(sizeHint));
+                _segments.Add(new Segment(_current, _currentLen));
+                _current = _pool.Rent(4096);
+                _currentLen = 0;
+
             }
-            switch (_state)
+            else if (_current == null)
             {
-                case State.Initial:
-                    _current = _pool.Rent(sizeHint);
-                    _state = State.Writing;
-                    _pageRemaining = _current!.Memory.Length;
-                    return _current.Memory;
-                case State.Writing:
-                    Debug.Assert(_current != null);
-                    if (_pageRemaining >= sizeHint && _pageRemaining > 0 && sizeHint != 0)
-                    {
-                        return _current.Memory.Slice(_pageBuffered);
-                    }
-                    //_segments.Add(new AsyncSegment(_current, _pageBuffered));
-                    _pageBuffered = 0;
-                    _current = _pool.Rent(MaxPageSize);
-                    _pageRemaining = _current.Memory.Length;
-                    return _current.Memory;
+                _current = _pool.Rent(4096);
+                _currentLen = 0;
             }
-            Debugger.Break();
-            return default;
+            return _current.Memory.Slice((int)_currentLen);
         }
 
         public Span<byte> GetSpan(int sizeHint = 0)
@@ -221,11 +195,13 @@ public class AsyncFileSequence
         public async Task FlushAsync()
         {
             Debug.Assert(_current != null);
-
+            _segments.Add(new Segment(_current, _currentLen));
+            await _sequence.FlushAsync(_segments);
+            _segments.Clear();
+            _current = null;
+            _currentLen = 0;
         }
-        private void ThrowArgumentException(string arg) => throw new ArgumentException(arg);
     }
-
     class AsyncSegment : ReadOnlySequenceSegment<byte>
     {
         public AsyncSegment(IMemoryOwner<byte> data, int length, AsyncSegment? prev)
