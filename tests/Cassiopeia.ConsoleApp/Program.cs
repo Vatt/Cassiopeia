@@ -2,19 +2,19 @@
 
 using Cassiopeia.Buffers;
 using Cassiopeia.Buffers.MemoryPool;
-using Cassiopeia.IO;
 using Cassiopeia.IO.FileSequence;
 using Cassiopeia.Protocol.Messages;
 using System.Buffers;
-using System.Diagnostics;
 
 //await Runner.RunSingleAsyncDriveE();
 //await Runner.RunSingleAsyncDriveD();
 //await Runner.RunAsyncOnDriveD();
 //await Runner.RunSingleMmapDriveE();
+await Runner.RunSingleAsyncOnWsl();
 //await Runner.RunSingleMmapWSL();
+//await Runner.RunMmapOnWSL();
 //await Runner.RunSingleMmapDriveD();
-await Runner.RunMmapOnDriveE();
+//await Runner.RunMmapOnDriveE();
 //await Runner.RunMmapOnDriveD();
 static class Runner
 {
@@ -25,10 +25,68 @@ static class Runner
     public static ClientHello Hello = new ClientHello("ConsoleApp", "0.0.1-001", ".NET", "This is for FileSequence", "gamover", "gamover", 42, true);
     //public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", "👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧","👨‍👨‍👧‍👧👨‍👨‍👧‍👧👨‍👨‍👧‍👧", 42, true);
     //public static ClientHello Hello = new ClientHello("他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "他妈的狗屎", "他妈的狗屎","他妈的狗屎", 42, true);
+
     public static Task RunSingleMmapWSL()
     {
-        Directory.Delete("/home/gamover/Cassiopeia/FileSequence", true);
+        //Directory.Delete("/home/gamover/Cassiopeia/FileSequence", true);
         return RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence");
+    }
+    public static Task RunMmapOnWSL()
+    {
+        CancellationTokenSource cts = new();
+        return Task.WhenAll(RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence0", cts), RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence1", cts),
+                            RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence2", cts), RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence3", cts),
+                            RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence4", cts), RunMmapSequence($"/home/gamover/Cassiopeia/FileSequence5", cts));
+    }
+    public static Task RunSingleAsyncOnWsl()
+    {
+        CancellationTokenSource cts = new();
+        return RunAsynSequenceOnWsl($"/home/gamover/Cassiopeia/AsyncFileSequence", cts);
+    }
+    public static async Task RunAsynSequenceOnWsl(string path, CancellationTokenSource? ctx)
+    {
+        AsyncFileSequence Sequence = await AsyncFileSequence.CreateAsync(MemoryPool, path, "Chunk", FileSize);
+        CancellationTokenSource cts = ctx ?? new();
+        //var reader = MmapReader(Sequence, cts);
+        var writer = AsyncWriter(Sequence, cts);
+        await Task.WhenAll(/*reader,*/ writer);
+    }
+    public static Task AsyncWriter(AsyncFileSequence sequence, CancellationTokenSource source)
+    {
+        return Task.Run(async () =>
+        {
+            var cts = source;
+            var token = cts.Token;
+            var seq = sequence;
+            var bufferWritter = seq.SequentialWriter;
+            
+            var iteration = 0;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    iteration += 1;
+                    // for(var i = 0; i< 10; i++)
+                    // {
+                    //     Write(bufferWritter);
+                    // }
+                    Write(bufferWritter);
+                    await bufferWritter.FlushAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.StackTrace);
+                    cts.Cancel();
+                }
+            }
+        });
+        void Write(AsyncFileSequence.AsyncFileWriter output)
+        {
+            var writer = new BufferWriter<AsyncFileSequence.AsyncFileWriter>(output);
+            ClientHello.Write(ref writer, Hello);
+            writer.Commit();
+        }
     }
     public static Task RunSingleMmapDriveE()
     {
@@ -164,7 +222,7 @@ static class Runner
                 //}
                 allIteration += 1;
                 //reader = new BufferReader(seq.ReadSequence);
-  
+
                 if (ClientHello.TryParse(ref reader, out var hello))
                 //if (reader.TryReadBytesTo(buffer))
                 {
